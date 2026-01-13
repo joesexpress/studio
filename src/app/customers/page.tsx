@@ -1,68 +1,51 @@
+
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Customer, ServiceRecord } from '@/lib/types';
 import CustomersClient from '@/components/customers/CustomersClient';
 import { useFirebase, useUser } from '@/firebase';
 import { collection, getDocs, query, collectionGroup } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
 
 export default function CustomersPage() {
-  const { firestore } = useFirebase();
-  const { user, isAuthReady } = useUser();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { firestore, isAuthReady } = useFirebase();
+  const [allRecords, setAllRecords] = useState<ServiceRecord[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Omit<Customer, 'records'>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCustomersAndRecords = async () => {
-      if (!firestore || !user) return;
+    const fetchAllData = async () => {
+      if (!firestore || !isAuthReady) return;
+
       setIsLoading(true);
       try {
-        // 1. Fetch all customers
-        const customersQuery = query(collection(firestore, 'customers'));
-        const customerSnapshot = await getDocs(customersQuery);
-        const customerList = customerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-
-        // 2. Fetch all service records for each customer
-        const customersWithData = await Promise.all(customerList.map(async (customer) => {
-            const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
-            const recordsSnapshot = await getDocs(recordsRef);
-            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-            
-            const totalJobs = records.length;
-            const totalBilled = records
-                .filter(r => r.status === 'Paid' || r.status === 'Owed')
-                .reduce((sum, r) => sum + (r.total || 0), 0);
-
-            return {
-                ...customer,
-                records,
-                totalJobs,
-                totalBilled
-            };
-        }));
+        // Fetch all customers
+        const custQuery = query(collection(firestore, 'customers'));
+        const custSnapshot = await getDocs(custQuery);
+        const customersList = custSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Omit<Customer, 'records'>));
+        setAllCustomers(customersList);
         
-        // 3. Sort and set the final state
-        setCustomers(customersWithData.sort((a,b) => b.totalJobs - a.totalJobs));
+        // Fetch all service records
+        const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
+        const recordsSnapshot = await getDocs(recordsQuery);
+        const recordsList = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+        setAllRecords(recordsList);
 
       } catch (error) {
-        console.error("Failed to fetch customer data:", error);
+        console.error("Failed to fetch data:", error);
       } finally {
         setIsLoading(false);
       }
     };
     
-    if (isAuthReady && user) {
-        fetchCustomersAndRecords();
-    } else if (isAuthReady) {
-      // Handle the case where there is no user, but auth is ready
-      setIsLoading(false);
-    }
-  }, [firestore, user, isAuthReady]);
+    fetchAllData();
+
+  }, [firestore, isAuthReady]);
 
 
-  if (isLoading || !isAuthReady) {
-    return <div>Loading customers...</div>
+  if (isLoading) {
+    return <div>Loading jobs...</div>
   }
 
-  return <CustomersClient customers={customers} />;
+  return <CustomersClient allRecords={allRecords} allCustomers={allCustomers} />;
 }

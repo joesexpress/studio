@@ -74,22 +74,6 @@ export default function RootLayout({
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Master Job Sheet">
-                  <Link href="/records">
-                    <AppWindow />
-                    <span>Master Job Sheet</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Quotes">
-                  <Link href="/quotes">
-                    <Quote />
-                    <span>Quotes</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Dashboard">
                   <Link href="/dashboard">
                     <BarChart3 />
@@ -102,6 +86,14 @@ export default function RootLayout({
                   <Link href="/customers">
                     <Users />
                     <span>Customers & Jobs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Quotes">
+                  <Link href="/quotes">
+                    <Quote />
+                    <span>Quotes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -124,7 +116,6 @@ export default function RootLayout({
                <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Time Clock">
                   <Link href="/time-clock">
-                    <Clock />
                     <span>Time Clock</span>
                   </Link>
                 </SidebarMenuButton>
