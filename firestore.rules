@@ -17,66 +17,18 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to technician profile documents.
-     * @allow Any authenticated user can manage technician profiles.
+     * @description Controls access to technician profile documents and all their subcollections.
+     * @allow Any authenticated user can manage all data under any technician path.
      */
-    match /technicians/{technicianId} {
+    match /technicians/{technicianId}/{path=**} {
       allow read, write: if isSignedIn();
     }
 
     /**
-     * @description Controls access to customer profile documents.
-     * @allow Any authenticated user can manage customer profiles.
+     * @description Controls access to customer profile documents and all their subcollections.
+     * @allow Any authenticated user can manage all data under any customer path.
      */
-    match /customers/{customerId} {
-      allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to a technician's view of service records.
-     * @allow Any authenticated user can manage service records.
-     */
-    match /technicians/{technicianId}/serviceRecords/{serviceRecordId} {
-      allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to a customer's view of service records.
-     * @allow Any authenticated user can manage service records.
-     */
-    match /customers/{customerId}/serviceRecords/{serviceRecordId} {
-       allow read, write: if isSignedIn();
-    }
-    
-    /**
-     * @description Controls access to a technician's to-do items.
-     * @allow Any authenticated user can manage their to-do items.
-     */
-    match /technicians/{technicianId}/todos/{todoId} {
-      allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to a technician's calendar events.
-     * @allow Any authenticated user can manage their calendar events.
-     */
-    match /technicians/{technicianId}/calendarEvents/{eventId} {
-        allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to a technician's expense records.
-     * @allow Any authenticated user can manage their expense records.
-     */
-    match /technicians/{technicianId}/expenses/{expenseId} {
-      allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to a technician's price book entries.
-     * @allow Any authenticated user can manage their price book.
-     */
-    match /technicians/{technicianId}/priceBookEntries/{entryId} {
+    match /customers/{customerId}/{path=**} {
       allow read, write: if isSignedIn();
     }
   }
