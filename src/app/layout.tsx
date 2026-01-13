@@ -25,6 +25,7 @@ import {
   FileText,
   Book,
   ClipboardPen,
+  Link2,
 } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { FirebaseClientProvider } from '@/firebase';
@@ -121,6 +122,14 @@ export default function RootLayout({
                     <Book />
                     <span>Price Book</span>
                   </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Company Drive">
+                  <a href="https://drive.google.com/drive/folders/1sGSRgseVIoXM6POdzyvti4qh88iHimS6" target="_blank" rel="noopener noreferrer">
+                    <Link2 />
+                    <span>Company Drive</span>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
