@@ -30,3 +30,12 @@ export type RevenueDataPoint = {
   date: string;
   revenue: number;
 };
+
+export type Customer = {
+  name: string;
+  address: string;
+  phone: string;
+  totalJobs: number;
+  totalBilled: number;
+  records: ServiceRecord[];
+};

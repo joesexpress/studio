@@ -10,7 +10,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { AppWindow, BarChart3, Wrench, Settings } from 'lucide-react';
+import { AppWindow, BarChart3, Wrench, Settings, Users } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getPlaceholderImage } from '@/lib/placeholder-data';
@@ -45,6 +45,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/dashboard">
                   <BarChart3 />
                   <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Customers">
+                <Link href="/customers">
+                  <Users />
+                  <span>Customers</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
