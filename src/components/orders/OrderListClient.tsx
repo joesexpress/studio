@@ -17,7 +17,7 @@ export default function OrderListClient({ initialItems }: { initialItems: OrderI
   const [newItemName, setNewItemName] = React.useState('');
   const [newItemQty, setNewItemQty] = React.useState(1);
   const { toast } = useToast();
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
 
   React.useEffect(() => {
       setItems(initialItems);

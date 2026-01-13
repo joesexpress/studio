@@ -6,15 +6,13 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function OrdersPage() {
-    const { firestore, user } = useFirebase();
+    const { firestore } = useFirebase();
 
     const itemsQuery = useMemoFirebase(() => {
-        if (!firestore || !user) return null;
-        // Assuming a single shopping list for the company, stored under a generic owner for simplicity
-        // A better approach would be a dedicated top-level `shoppingLists` collection.
-        // For now, we'll store it under the first mock technician.
+        if (!firestore) return null;
+        // As in orders/page.tsx, we are using a shared list under a generic technician
         return collection(firestore, 'technicians', 'tech-jake', 'shoppingList');
-    }, [firestore, user]);
+    }, [firestore]);
 
     const { data: initialItems, isLoading } = useCollection(itemsQuery);
 

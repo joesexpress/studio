@@ -2,7 +2,7 @@
 'use client';
 import RecordsPageClient from '@/components/records/RecordsPageClient';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function RecordsPage() {
   const { firestore } = useFirebase();

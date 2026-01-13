@@ -16,8 +16,8 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 export default function TimeClockClient({ initialTimeLogs, technicians }: { initialTimeLogs: TimeLog[], technicians: Technician[] }) {
@@ -31,6 +31,10 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
 
   const { toast } = useToast();
   
+  React.useEffect(() => {
+    setTimeLogs(initialTimeLogs);
+  }, [initialTimeLogs])
+
   React.useEffect(() => {
     // Set current time only on the client
     setCurrentTime(new Date());
@@ -62,28 +66,30 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     const totalMinutes = differenceInMinutes(timeOut, activeLog.timeIn as Date);
     const totalHours = totalMinutes / 60;
 
-    const completedLog: TimeLog = {
-      ...activeLog,
-      timeOut,
+    const completedLog: Omit<TimeLog, 'timeIn' | 'timeOut'> & {timeIn: any, timeOut: any} = {
+      id: activeLog.id!,
+      timeIn: activeLog.timeIn,
+      timeOut: timeOut,
       notes,
       totalHours,
       technicianId: selectedTechnician,
-    } as TimeLog;
+    };
     
     const logRef = doc(firestore, 'technicians', selectedTechnician, 'timeLogs', completedLog.id);
     
     const dataToSave = {
         id: completedLog.id,
         technicianId: completedLog.technicianId,
-        timeIn: serverTimestamp(),
-        timeOut: serverTimestamp(),
+        timeIn: completedLog.timeIn, // Will be converted by Firestore
+        timeOut: completedLog.timeOut, // Will be converted
         notes: completedLog.notes,
         totalHours: completedLog.totalHours
     };
+    // We use setDoc here because we created the ID on the client
+    setDocumentNonBlocking(logRef, dataToSave, {});
 
-    setDocumentNonBlocking(logRef, dataToSave, { merge: false });
-
-    setTimeLogs(prev => [completedLog, ...prev]);
+    // Optimistically update UI
+    setTimeLogs(prev => [completedLog as any, ...prev]);
     setActiveLog(null);
     setNotes('');
     toast({
@@ -97,13 +103,20 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     const d = typeof date.toDate === 'function' ? date.toDate() : new Date(date);
     return format(d, 'p');
   }
+  
+  const getRowDate = (date: any) => {
+    if (!date) return 'N/A';
+    const d = typeof date.toDate === 'function' ? date.toDate() : new Date(date);
+    return format(d, 'PP');
+  }
 
   const filteredLogs = React.useMemo(() => {
     return timeLogs.filter(log => {
       const techMatch = log.technicianId === selectedTechnician;
-      if (!dateRange?.from || !techMatch) return techMatch;
+      if (!techMatch) return false;
+      if (!dateRange?.from) return true;
       const logDate = typeof log.timeIn === 'string' ? new Date(log.timeIn) : (log.timeIn as any).toDate();
-      return isWithinInterval(logDate, { start: dateRange.from, end: dateRange.to || dateRange.from });
+      return isWithinInterval(logDate, { start: dateRange.from, end: dateRange.to || new Date(dateRange.from.getTime() + 24 * 60 * 60 * 1000 -1) });
     });
   }, [timeLogs, selectedTechnician, dateRange]);
 
@@ -123,7 +136,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
           <p className="text-muted-foreground">Clock in and out for your shifts.</p>
         </div>
         <div className="flex items-center gap-4">
-            <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+            <Select value={selectedTechnician} onValueChange={setSelectedTechnician} disabled={!!activeLog}>
                 <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select Technician" />
                 </SelectTrigger>
@@ -154,7 +167,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
                       format(dateRange.from, "LLL dd, y")
                     )
                   ) : (
-                    <span>Pick a date range</span>
+                    <span>Filter by date range</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -231,7 +244,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
               {filteredLogs.length > 0 ? (
                 filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>{format(log.timeIn.toDate ? log.timeIn.toDate() : new Date(log.timeIn as any), 'PP')}</TableCell>
+                    <TableCell>{getRowDate(log.timeIn)}</TableCell>
                     <TableCell>{getFormattedDate(log.timeIn)}</TableCell>
                     <TableCell>{getFormattedDate(log.timeOut)}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{log.notes || 'N/A'}</TableCell>

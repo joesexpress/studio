@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -145,10 +146,10 @@ export default function RootLayout({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Price Book">
-                  <a href="https://drive.google.com/drive/folders/1sGSRgseVIoXM6POdzyvti4qh88iHimS6?usp=drive_link" target="_blank" rel="noopener noreferrer">
+                  <Link href="/price-book">
                     <Book />
                     <span>Price Book</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
