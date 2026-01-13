@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,9 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Papa from 'papaparse';
-import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import { doc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { doc, collection, getDocs, query, where, limit, setDoc, writeBatch } from 'firebase/firestore';
 import type { ServiceRecord, Customer } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 
@@ -73,10 +74,18 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       const totalRecords = records.length;
       let processedCount = 0;
 
-      // Cache for existing customers to reduce Firestore reads
-      const customerCache = new Map<string, string>();
+      const customerCache = new Map<string, Customer>();
+
+      // First pass: build a cache of existing customers
+      const allCustomerDocs = await getDocs(collection(firestore, 'customers'));
+      allCustomerDocs.forEach(doc => {
+          const customer = doc.data() as Customer;
+          customerCache.set(customer.name.trim().toLowerCase(), customer);
+      });
+
+      const writePromises: Promise<any>[] = [];
   
-      for (const record of records) {
+      for (const [index, record] of records.entries()) {
         const customerName = record.Customer || 'N/A';
         if (customerName === 'N/A' || !customerName.trim()) {
             processedCount++;
@@ -92,32 +101,25 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         const normalizedCustomerName = customerName.trim().toLowerCase();
 
         // 1. Find or create customer
-        if (customerCache.has(normalizedCustomerName)) {
-            customerId = customerCache.get(normalizedCustomerName)!;
-        } else {
-            const customersRef = collection(firestore, 'customers');
-            const q = query(customersRef, where('name', '==', customerName.trim()), limit(1));
-            const querySnapshot = await getDocs(q);
+        let customer = customerCache.get(normalizedCustomerName);
 
-            if (!querySnapshot.empty) {
-                const existingCustomer = querySnapshot.docs[0];
-                customerId = existingCustomer.id;
-            } else {
-                customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${processedCount}-${Date.now()}`;
-                const customerDocRef = doc(firestore, 'customers', customerId);
-                const newCustomerData: Partial<Customer> = {
-                    id: customerId,
-                    name: customerName.trim(),
-                    address: record.Address || 'N/A',
-                    phone: record.Phone || 'N/A',
-                };
-                // This write can be non-blocking
-                setDocumentNonBlocking(customerDocRef, newCustomerData, { merge: true });
-            }
-            customerCache.set(normalizedCustomerName, customerId);
+        if (!customer) {
+            customerId = `cust-${Date.now()}-${index}`;
+            const newCustomerData: Partial<Customer> = {
+                id: customerId,
+                name: customerName.trim(),
+                address: record.Address || 'N/A',
+                phone: record.Phone || 'N/A',
+            };
+            const customerDocRef = doc(firestore, 'customers', customerId);
+            writePromises.push(setDoc(customerDocRef, newCustomerData, { merge: true }));
+            customerCache.set(normalizedCustomerName, newCustomerData as Customer);
+            customerId = newCustomerData.id!;
+        } else {
+            customerId = customer.id;
         }
   
-        const recordId = `rec-${customerId}-${Date.now()}-${processedCount}`;
+        const recordId = `rec-${customerId}-${Date.now()}-${index}`;
   
         const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
         
@@ -159,20 +161,22 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
           status: (record.Status as any) || 'N/A'
         };
   
-        // Save to customer's subcollection ONLY. This is the single source of truth.
+        // Add write operation to the list
         const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-        setDocumentNonBlocking(customerRecordRef, newRecord, { merge: true });
+        writePromises.push(setDoc(customerRecordRef, newRecord, { merge: true }));
         
         processedCount++;
         setProgress((processedCount / totalRecords) * 100);
       }
+
+      // Execute all writes in parallel
+      await Promise.all(writePromises);
       
       toast({
         title: 'Import Successful',
-        description: `${processedCount} records have been imported. The page will now refresh.`,
+        description: `${processedCount} records have been imported.`,
       });
-      // A simple way to refresh the data is to reload the page.
-      setTimeout(() => window.location.reload(), 2000);
+      onDialogClose(false);
 
     } catch (e: any) {
         console.error('CSV Import Error:', e);
@@ -264,3 +268,5 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
     </Dialog>
   );
 }
+
+    
