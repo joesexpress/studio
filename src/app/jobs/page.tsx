@@ -6,19 +6,31 @@ import type { Todo, CalendarEvent } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TodoList from '@/components/jobs/TodoList';
 import JobCalendar from '@/components/jobs/JobCalendar';
-import { MOCK_TODOS, MOCK_EVENTS } from '@/lib/mock-data';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function JobsPage() {
-  // Using mock data instead of Firestore
-  const todos = MOCK_TODOS;
-  const calendarEvents = MOCK_EVENTS;
+  const { firestore, user } = useFirebase();
+
+  const todosQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'technicians', user.uid, 'todos');
+  }, [firestore, user]);
+  const { data: todos } = useCollection<Todo>(todosQuery);
+  
+  const calendarEventsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'technicians', user.uid, 'calendarEvents');
+  }, [firestore, user]);
+  const { data: calendarEvents } = useCollection<CalendarEvent>(calendarEventsQuery);
+
 
   const events = useMemo(() => {
     if (!calendarEvents) return [];
     return calendarEvents.map(event => ({
       ...event,
-      start: new Date(event.start as Date),
-      end: new Date(event.end as Date),
+      start: (event.start as any).toDate(),
+      end: (event.end as any).toDate(),
     }));
   }, [calendarEvents]);
 

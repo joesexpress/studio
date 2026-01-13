@@ -15,18 +15,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
-import { MOCK_PRICE_BOOK } from '@/lib/mock-data';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 // import UploadPriceBookDialog from './UploadPriceBookDialog';
 
 export default function PriceBookPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
+  const { firestore, user } = useFirebase();
 
-  // Using mock data instead of Firestore
-  const priceBookEntries = MOCK_PRICE_BOOK;
+  const priceBookQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'technicians', user.uid, 'priceBookEntries');
+  }, [firestore, user]);
+  
+  const { data: priceBookEntries, isLoading } = useCollection<PriceBookEntry>(priceBookQuery);
 
   const getEntryDate = (entry: PriceBookEntry) => {
     if (!entry.uploadedAt) return 'N/A';
-    const date = new Date(entry.uploadedAt as any);
+    const date = (entry.uploadedAt as any).toDate();
     return format(date, 'PPP p');
   };
 
@@ -54,7 +60,13 @@ export default function PriceBookPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {priceBookEntries && priceBookEntries.length > 0 ? (
+              {isLoading ? (
+                 <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">
+                    Loading documents...
+                  </TableCell>
+                </TableRow>
+              ) : priceBookEntries && priceBookEntries.length > 0 ? (
                 priceBookEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell className="font-medium">{entry.fileName}</TableCell>

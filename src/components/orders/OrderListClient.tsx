@@ -9,32 +9,44 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 export default function OrderListClient({ initialItems }: { initialItems: OrderItem[] }) {
   const [items, setItems] = React.useState(initialItems);
   const [newItemName, setNewItemName] = React.useState('');
   const [newItemQty, setNewItemQty] = React.useState(1);
   const { toast } = useToast();
+  const { firestore, user } = useFirebase();
+
+  React.useEffect(() => {
+      setItems(initialItems);
+  }, [initialItems]);
 
   const handleAddItem = () => {
     if (!newItemName.trim()) {
       toast({ title: "Item name cannot be empty.", variant: "destructive" });
       return;
     }
+    if (!firestore) return;
 
-    const newItem: OrderItem = {
-      id: `item-${Date.now()}`,
+    const newItem: Omit<OrderItem, 'id'> = {
       name: newItemName.trim(),
       quantity: newItemQty,
     };
+    
+    // As in orders/page.tsx, we are using a shared list under a generic technician
+    const listRef = collection(firestore, 'technicians', 'tech-jake', 'shoppingList');
+    addDocumentNonBlocking(listRef, newItem);
 
-    setItems(prev => [newItem, ...prev]);
     setNewItemName('');
     setNewItemQty(1);
   };
 
   const handleDeleteItem = (itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
+    if (!firestore) return;
+    const itemRef = doc(firestore, 'technicians', 'tech-jake', 'shoppingList', itemId);
+    deleteDocumentNonBlocking(itemRef);
   };
 
   return (

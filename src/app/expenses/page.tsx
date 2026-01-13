@@ -16,17 +16,27 @@ import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
 import UploadExpenseDialog from '@/components/expenses/UploadExpenseDialog';
-import { MOCK_EXPENSES } from '@/lib/mock-data';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+
 
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
+  const { firestore, user } = useFirebase();
 
-  // Using mock data instead of Firestore
-  const expenses = MOCK_EXPENSES;
+  const expensesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+        collection(firestore, 'technicians', user.uid, 'expenses'),
+        orderBy('date', 'desc')
+    );
+  }, [firestore, user]);
+
+  const { data: expenses, isLoading } = useCollection<Expense>(expensesQuery);
 
   const getEntryDate = (entry: Expense) => {
     if (!entry.date) return 'N/A';
-    const date = new Date(entry.date as string);
+    const date = typeof entry.date === 'string' ? new Date(entry.date) : (entry.date as any).toDate();
     return format(date, 'PPP');
   };
   
@@ -69,7 +79,13 @@ export default function ExpensesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {expenses && expenses.length > 0 ? (
+              {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        Loading expenses...
+                    </TableCell>
+                  </TableRow>
+              ) : expenses && expenses.length > 0 ? (
                 expenses.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>{getEntryDate(expense)}</TableCell>

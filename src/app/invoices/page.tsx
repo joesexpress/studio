@@ -15,15 +15,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import RecordDetailsSheet from '@/components/records/RecordDetailsSheet';
 import { format } from 'date-fns';
-import { MOCK_RECORDS } from '@/lib/mock-data';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collectionGroup, query, where } from 'firebase/firestore';
 
 export default function InvoicesPage() {
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
-  // Using mock data instead of Firestore
-  const invoices = MOCK_RECORDS.filter(r => r.status === 'Owed');
-  
+  const { firestore } = useFirebase();
+
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collectionGroup(firestore, 'serviceRecords'),
+      where('status', '==', 'Owed')
+    );
+  }, [firestore]);
+
+  const { data: invoices, isLoading } = useCollection<ServiceRecord>(invoicesQuery);
+
   const handleViewDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
     setIsDetailsOpen(true);
@@ -31,7 +41,7 @@ export default function InvoicesPage() {
 
   const getRecordDate = (record: ServiceRecord) => {
     if (!record.date) return 'N/A';
-    const date = new Date(record.date as string);
+    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
     return format(date, 'P');
   };
 
@@ -67,7 +77,13 @@ export default function InvoicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices && invoices.length > 0 ? invoices.map(record => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    Loading invoices...
+                  </TableCell>
+                </TableRow>
+              ) : invoices && invoices.length > 0 ? invoices.map(record => (
                 <TableRow key={record.id}>
                   <TableCell>{getRecordDate(record)}</TableCell>
                   <TableCell>{record.customer}</TableCell>

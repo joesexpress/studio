@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, ServiceRecord } from '@/lib/types';
 import DashboardClient from '@/components/dashboard/DashboardClient';
 import DashboardFilters from '@/components/dashboard/DashboardFilters';
@@ -9,7 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, Wrench } from 'lucide-react';
 import { format, isWithinInterval } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { MOCK_RECORDS } from '@/lib/mock-data';
+import { useFirebase } from '@/firebase';
+import { collectionGroup, getDocs, query } from 'firebase/firestore';
+
 
 function useDashboardData(
   serviceRecords: ServiceRecord[] | null,
@@ -31,7 +33,7 @@ function useDashboardData(
     const uniqueTechnicians = Array.from(new Set(serviceRecords.map(r => r.technician).filter(Boolean))).sort();
 
     const filteredRecords = serviceRecords.filter(record => {
-      const recordDate = new Date(record.date as string);
+      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
 
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
       const techMatch = !filters.technician || record.technician === filters.technician;
@@ -46,7 +48,7 @@ function useDashboardData(
     let totalRevenue = 0;
 
     filteredRecords.forEach(record => {
-      const recordDate = new Date(record.date as string);
+      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
 
       // Technician Performance
       if (!technicians[record.technician]) {
@@ -98,11 +100,29 @@ export default function DashboardPage() {
     status: '',
   });
 
-  // Using mock data instead of Firestore
-  const serviceRecords = MOCK_RECORDS;
+  const { firestore } = useFirebase();
+  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAllRecords = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
+        const snapshot = await getDocs(recordsQuery);
+        const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+        setServiceRecords(records);
+        setIsLoading(false);
+    }
+    fetchAllRecords();
+  }, [firestore]);
+
 
   const { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs, uniqueTechnicians } = useDashboardData(serviceRecords, filters);
 
+  if (isLoading) {
+    return <div>Loading dashboard data...</div>
+  }
 
   return (
     <div className="flex flex-col gap-6">

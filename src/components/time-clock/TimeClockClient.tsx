@@ -16,6 +16,8 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import type { DateRange } from 'react-day-picker';
 import { cn } from '@/lib/utils';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
 
 
 export default function TimeClockClient({ initialTimeLogs, technicians }: { initialTimeLogs: TimeLog[], technicians: Technician[] }) {
@@ -25,6 +27,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   const [currentTime, setCurrentTime] = React.useState<Date | null>(null);
   const [selectedTechnician, setSelectedTechnician] = React.useState<string>(technicians?.[0]?.id || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+  const { firestore } = useFirebase();
 
   const { toast } = useToast();
   
@@ -53,7 +56,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   };
 
   const handleClockOut = () => {
-    if (!activeLog || !activeLog.timeIn) return;
+    if (!activeLog || !activeLog.timeIn || !firestore) return;
 
     const timeOut = new Date();
     const totalMinutes = differenceInMinutes(timeOut, activeLog.timeIn as Date);
@@ -66,13 +69,26 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
       totalHours,
       technicianId: selectedTechnician,
     } as TimeLog;
+    
+    const logRef = doc(firestore, 'technicians', selectedTechnician, 'timeLogs', completedLog.id);
+    
+    const dataToSave = {
+        id: completedLog.id,
+        technicianId: completedLog.technicianId,
+        timeIn: serverTimestamp(),
+        timeOut: serverTimestamp(),
+        notes: completedLog.notes,
+        totalHours: completedLog.totalHours
+    };
+
+    setDocumentNonBlocking(logRef, dataToSave, { merge: false });
 
     setTimeLogs(prev => [completedLog, ...prev]);
     setActiveLog(null);
     setNotes('');
     toast({
       title: 'Clocked Out',
-      description: `Your shift has ended. Total time: ${totalHours.toFixed(2)} hours.`,
+      description: `Your shift has been recorded. Total time: ${totalHours.toFixed(2)} hours.`,
     });
   };
 
@@ -86,7 +102,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     return timeLogs.filter(log => {
       const techMatch = log.technicianId === selectedTechnician;
       if (!dateRange?.from || !techMatch) return techMatch;
-      const logDate = typeof log.timeIn.toDate === 'function' ? log.timeIn.toDate() : new Date(log.timeIn as any);
+      const logDate = typeof log.timeIn === 'string' ? new Date(log.timeIn) : (log.timeIn as any).toDate();
       return isWithinInterval(logDate, { start: dateRange.from, end: dateRange.to || dateRange.from });
     });
   }, [timeLogs, selectedTechnician, dateRange]);
@@ -97,7 +113,6 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
 
 
   const currentActiveTechnician = technicians.find(t => t.id === activeLog?.technicianId);
-  const currentStatus = activeLog ? `Clocked in since ${format(activeLog.timeIn as Date, 'p')}` : 'Currently clocked out';
   const selectedTechName = technicians.find(t => t.id === selectedTechnician)?.name || 'Select Technician';
 
   return (
@@ -160,16 +175,16 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
       <Card className="md:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Clock In / Out</CardTitle>
-          <div className="text-sm text-muted-foreground font-mono">{currentTime ? format(currentTime, 'PPP p') : ''}</div>
+          {currentTime && <div className="text-sm text-muted-foreground font-mono">{format(currentTime, 'PPP p')}</div>}
         </CardHeader>
         <CardContent className="space-y-4">
            <div className="p-4 rounded-lg bg-muted flex items-center justify-center text-center h-28">
             <div>
               <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="font-semibold">{currentActiveTechnician ? `${currentActiveTechnician.name} is clocked in` : 'Clocked Out'}</p>
-              {activeLog?.timeIn && (
+              {activeLog?.timeIn && currentTime && (
                  <p className="text-sm text-muted-foreground">
-                    Shift duration: {formatDistanceStrict(new Date(), activeLog.timeIn as Date)}
+                    Shift duration: {formatDistanceStrict(currentTime, activeLog.timeIn as Date)}
                 </p>
               )}
             </div>
