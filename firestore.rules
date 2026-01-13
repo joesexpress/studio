@@ -37,7 +37,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage service records.
      */
     match /technicians/{technicianId}/serviceRecords/{serviceRecordId} {
-      allow read, write: if isSignedIn();
+      allow get, write: if isSignedIn();
+    }
+    match /technicians/{technicianId}/serviceRecords {
+        allow list: if isSignedIn();
     }
 
     /**
@@ -45,7 +48,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage service records.
      */
     match /customers/{customerId}/serviceRecords/{serviceRecordId} {
-       allow read, write: if isSignedIn();
+       allow get, write: if isSignedIn();
+    }
+     match /customers/{customerId}/serviceRecords {
+        allow list: if isSignedIn();
     }
     
     /**
@@ -53,7 +59,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage their to-do items.
      */
     match /technicians/{technicianId}/todos/{todoId} {
-      allow read, write: if isSignedIn();
+      allow get, write: if isSignedIn();
+    }
+    match /technicians/{technicianId}/todos {
+        allow list: if isSignedIn();
     }
 
     /**
@@ -61,7 +70,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage their calendar events.
      */
     match /technicians/{technicianId}/calendarEvents/{eventId} {
-        allow read, write: if isSignedIn();
+        allow get, write: if isSignedIn();
+    }
+    match /technicians/{technicianId}/calendarEvents {
+        allow list: if isSignedIn();
     }
 
     /**
@@ -69,7 +81,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage their expense records.
      */
     match /technicians/{technicianId}/expenses/{expenseId} {
-      allow read, write: if isSignedIn();
+      allow get, write: if isSignedIn();
+    }
+     match /technicians/{technicianId}/expenses {
+      allow list: if isSignedIn();
     }
 
     /**
@@ -77,7 +92,10 @@ service cloud.firestore {
      * @allow Any authenticated user can manage their price book.
      */
     match /technicians/{technicianId}/priceBookEntries/{entryId} {
-      allow read, write: if isSignedIn();
+      allow get, write: if isSignedIn();
+    }
+    match /technicians/{technicianId}/priceBookEntries {
+      allow list: if isSignedIn();
     }
   }
 }
