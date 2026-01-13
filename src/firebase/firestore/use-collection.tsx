@@ -85,15 +85,19 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        let path = '';
+        try {
+           path =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        } catch (e) {
+          console.error("Could not determine path for Firestore query in useCollection.", e);
+        }
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
-          path,
+          path: path || 'unknown',
         })
 
         setError(contextualError)
@@ -108,7 +112,10 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+    // This check is disabled in production.
+    if (process.env.NODE_ENV === 'development') {
+      console.warn("useCollection was called with a query that was not memoized with useMemoFirebase. This can lead to performance issues and infinite loops.", memoizedTargetRefOrQuery);
+    }
   }
   return { data, isLoading, error };
 }

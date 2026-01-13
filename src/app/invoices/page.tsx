@@ -28,6 +28,8 @@ export default function InvoicesPage() {
 
   const invoicesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // This query requires a composite index. The firestore.rules file has a comment
+    // that should trigger its creation automatically.
     return query(
       collectionGroup(firestore, 'serviceRecords'),
       where('status', '==', 'Owed')
@@ -60,6 +62,7 @@ export default function InvoicesPage() {
       Technician: r.technician,
       Address: r.address,
       'Amount Owed': r.total,
+      'Payment Method': r.paymentMethod || 'N/A',
     }));
     downloadCsv(dataToExport, `accounts-receivable-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
@@ -93,13 +96,14 @@ export default function InvoicesPage() {
                 <TableHead>Technician</TableHead>
                 <TableHead>Address</TableHead>
                 <TableHead className="text-right">Amount Owed</TableHead>
+                <TableHead>Payment Method</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Loading invoices...
                   </TableCell>
                 </TableRow>
@@ -112,6 +116,7 @@ export default function InvoicesPage() {
                   <TableCell className="text-right font-medium text-destructive">
                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(record.total)}
                   </TableCell>
+                  <TableCell>{record.paymentMethod || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleViewDetails(record)}>
                       View Details
@@ -120,7 +125,7 @@ export default function InvoicesPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No outstanding invoices. Great job!
                   </TableCell>
                 </TableRow>
