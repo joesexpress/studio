@@ -31,11 +31,11 @@ export default function DashboardFilters({ filters, onFiltersChange, technicians
   };
 
   const handleTechnicianChange = (technician: string) => {
-    onFiltersChange({ ...filters, technician });
+    onFiltersChange({ ...filters, technician: technician === 'all' ? '' : technician });
   };
 
   const handleStatusChange = (status: string) => {
-    onFiltersChange({ ...filters, status });
+    onFiltersChange({ ...filters, status: status === 'all' ? '' : status });
   };
   
   const handleClearFilters = () => {
@@ -81,24 +81,24 @@ export default function DashboardFilters({ filters, onFiltersChange, technicians
           </PopoverContent>
         </Popover>
 
-        <Select value={filters.technician} onValueChange={handleTechnicianChange}>
+        <Select value={filters.technician || 'all'} onValueChange={handleTechnicianChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Technicians" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Technicians</SelectItem>
+            <SelectItem value="all">All Technicians</SelectItem>
             {technicians.map(tech => (
               <SelectItem key={tech} value={tech}>{tech}</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={filters.status} onValueChange={handleStatusChange}>
+        <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             {statuses.map(status => (
               <SelectItem key={status} value={status}>{status}</SelectItem>
             ))}
