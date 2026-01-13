@@ -23,10 +23,12 @@ export default function LoginPage() {
   const { auth } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
-  const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+
+  // Use a hardcoded email for a shared login experience.
+  const sharedEmail = 'tech@kdhvac.com';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,17 +36,17 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, sharedEmail, password);
       toast({
         title: 'Login Successful',
-        description: 'Welcome back!',
+        description: 'Welcome!',
       });
       router.push('/records'); // Redirect to a protected page on successful login
     } catch (err: any) {
       const errorCode = err.code;
-      let errorMessage = 'Failed to sign in. Please check your credentials.';
+      let errorMessage = 'Failed to sign in. Please check your password.';
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-        errorMessage = 'Invalid email or password.';
+        errorMessage = 'Invalid password.';
       }
       setError(errorMessage);
       setIsLoading(false);
@@ -67,23 +69,12 @@ export default function LoginPage() {
                 className="w-auto h-auto mx-auto mb-4"
                 unoptimized
             />
-            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardTitle className="text-2xl">Technician Login</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account.
+              Enter the shared password to access the dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input 
