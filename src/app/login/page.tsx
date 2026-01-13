@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [error, setError] = React.useState('');
 
   // Use a hardcoded email for a shared login experience.
-  const sharedEmail = 'tech@kdhvac.com';
+  const sharedEmail = 'guest@kdhvac.com';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
