@@ -88,7 +88,7 @@ function LoginFormContent() {
       } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         toast({
             title: 'Sign In Failed',
-            description: 'The password you entered is incorrect. Please try again.',
+            description: 'The password you entered is incorrect. Please try again or use "Forgot Password?".',
             variant: 'destructive',
         });
       } else {
@@ -105,9 +105,10 @@ function LoginFormContent() {
 
   const handleGuestSignIn = () => {
     setEmail('guest@kdhvac.com');
+    setPassword('');
     toast({
         title: 'Guest Login',
-        description: 'Please enter the password "kdhvac" to continue.',
+        description: 'The password is "kdhvac".',
     });
   }
 
@@ -173,6 +174,7 @@ function LoginFormContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
                     disabled={isLoading}
+                    placeholder="kdhvac"
                 />
             </div>
           <Button onClick={handleSignIn} className="w-full" disabled={isLoading}>
@@ -182,7 +184,7 @@ function LoginFormContent() {
                 Please wait...
               </>
             ) : (
-              'Sign In'
+              'Sign In or Create Account'
             )}
           </Button>
           <Button variant="secondary" onClick={handleGuestSignIn} className="w-full" disabled={isLoading}>
