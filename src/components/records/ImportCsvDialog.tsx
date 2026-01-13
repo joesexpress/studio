@@ -99,7 +99,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
                 <AlertTitle>Required CSV Format</AlertTitle>
                 <AlertDescription className="text-xs">
                     Your file must contain these exact headers: <br/>
-                    <code className="font-mono bg-muted p-1 rounded-sm">Date,Tech,Customer,Address,Phone,Model,Serial,Filter Size,Freon,Total Hours,Breakdown,Full Description of Work,Total,Status,File Link</code>
+                    <code className="font-mono bg-muted p-1 rounded-sm">Date,Tech,Customer,Address,Phone,Model,Serial,Filter Size,Freon,Times,Total Hours,Breakdown,Full Description of Work,Total,Status,File Link</code>
                 </AlertDescription>
             </Alert>
             <div 
