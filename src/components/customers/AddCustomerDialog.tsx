@@ -15,10 +15,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { addCustomerAndJob } from '@/app/actions';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import type { Customer } from '@/lib/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 
 type AddCustomerDialogProps = {
@@ -32,21 +35,69 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
   const formRef = React.useRef<HTMLFormElement>(null);
   const [technicianId, setTechnicianId] = React.useState<string>('');
   
+  const [name, setName] = React.useState('');
+  const [address, setAddress] = React.useState('');
+  const [phone, setPhone] = React.useState('');
+  const [jobDescription, setJobDescription] = React.useState('');
+
+  const [potentialMatches, setPotentialMatches] = React.useState<Customer[]>([]);
+  const [isMatchDialogOpen, setIsMatchDialogOpen] = React.useState(false);
+
+  const { firestore } = useFirebase();
+
+
+  const findPotentialMatches = async () => {
+    if (!firestore || !name.trim()) return [];
+    
+    const lowerCaseName = name.trim().toLowerCase();
+    
+    const customersRef = collection(firestore, 'customers');
+    const q = query(customersRef);
+    const querySnapshot = await getDocs(q);
+
+    const matches: Customer[] = [];
+    querySnapshot.forEach((doc) => {
+        const customer = doc.data() as Customer;
+        if (customer.name.toLowerCase().includes(lowerCaseName)) {
+            matches.push({ ...customer, id: doc.id });
+        }
+    });
+    return matches;
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    
-     if (!technicianId) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please select a technician.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
     setIsSaving(true);
-    const formData = new FormData(event.currentTarget);
+    
+    // 1. Check for matches
+    const matches = await findPotentialMatches();
+    if (matches.length > 0) {
+        setPotentialMatches(matches);
+        setIsMatchDialogOpen(true);
+        setIsSaving(false);
+        return;
+    }
+
+    // 2. If no matches, proceed to create
+    await createNewCustomerAndJob();
+  };
+
+  const createNewCustomerAndJob = async () => {
+    if (!technicianId) {
+        toast({
+            title: 'Validation Error',
+            description: 'Please select a technician.',
+            variant: 'destructive',
+        });
+        setIsSaving(false);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('address', address);
+    formData.append('phone', phone);
+    formData.append('jobDescription', jobDescription);
     formData.append('technicianId', technicianId);
 
     const result = await addCustomerAndJob(formData);
@@ -56,7 +107,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
         title: 'Customer and Job Added',
         description: 'The new customer and their scheduled job have been created.',
       });
-      onOpenChange(false);
+      handleOpenChange(false);
     } else {
       toast({
         title: 'Error',
@@ -65,17 +116,39 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
       });
     }
     setIsSaving(false);
-  };
+  }
   
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       formRef.current?.reset();
       setTechnicianId('');
+      setName('');
+      setAddress('');
+      setPhone('');
+      setJobDescription('');
     }
     onOpenChange(open);
   }
 
+  const handleForceCreate = () => {
+    setIsMatchDialogOpen(false);
+    setIsSaving(true);
+    createNewCustomerAndJob();
+  }
+
+  const handleUseExisting = (customerId: string) => {
+    // This is a simplified version. A real implementation might create a job for the existing customer.
+    // For now, we'll just close the dialogs and toast a message.
+    setIsMatchDialogOpen(false);
+    onOpenChange(false);
+    toast({
+        title: 'Action Required',
+        description: `Please create the job for the existing customer from the Customers page.`,
+    });
+  }
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <form onSubmit={handleSubmit} ref={formRef}>
@@ -88,15 +161,15 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Customer Name</Label>
-              <Input id="name" name="name" required />
+              <Input id="name" name="name" required value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="address">Address</Label>
-              <Input id="address" name="address" required />
+              <Input id="address" name="address" required value={address} onChange={e => setAddress(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" name="phone" required />
+              <Input id="phone" name="phone" required value={phone} onChange={e => setPhone(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="jobDescription">Job Description</Label>
@@ -105,6 +178,8 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
                 name="jobDescription"
                 placeholder="e.g., Annual HVAC maintenance check..."
                 required
+                value={jobDescription}
+                onChange={e => setJobDescription(e.target.value)}
               />
             </div>
              <div className="grid gap-2">
@@ -122,7 +197,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
@@ -133,5 +208,36 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={isMatchDialogOpen} onOpenChange={setIsMatchDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Potential Duplicate Customer</AlertDialogTitle>
+                <AlertDialogDescription>
+                    We found existing customers with a similar name. Would you like to use one of them or create a new customer?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="max-h-60 overflow-y-auto my-4 space-y-2">
+                {potentialMatches.map(match => (
+                    <div key={match.id} className="p-3 border rounded-md flex justify-between items-center">
+                        <div>
+                            <p className="font-semibold">{match.name}</p>
+                            <p className="text-sm text-muted-foreground">{match.address}</p>
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={() => handleUseExisting(match.id)}>
+                            Use This Customer
+                        </Button>
+                    </div>
+                ))}
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleForceCreate}>
+                    Create New Customer
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
