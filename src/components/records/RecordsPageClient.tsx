@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -23,10 +24,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from './RecordDetailsSheet';
 import UploadRecordDialog from './UploadRecordDialog';
-import { PlusCircle, ListFilter, FileUp } from 'lucide-react';
+import { PlusCircle, ListFilter, FileUp, Download } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { format } from 'date-fns';
 import ImportCsvDialog from './ImportCsvDialog';
+import { downloadCsv } from '@/lib/utils';
 
 type RecordsPageClientProps = {
   initialRecords: ServiceRecord[];
@@ -101,6 +103,21 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
     const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
     return format(date, 'P');
   }
+
+  const handleDownloadReport = () => {
+    const dataToExport = filteredRecords.map(r => ({
+      Date: getRecordDate(r),
+      Customer: r.customer,
+      Technician: r.technician,
+      Address: r.address,
+      Total: r.total,
+      Status: r.status,
+      'Payment Method': r.paymentMethod || 'N/A',
+      Description: r.description,
+      'File URL': r.fileUrl,
+    }));
+    downloadCsv(dataToExport, `service-records-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
   
   return (
     <>
@@ -135,6 +152,10 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
             <FileUp className="mr-2 h-4 w-4" />
             Import from CSV
           </Button>
+          <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+            <Download className="mr-2 h-4 w-4" />
+            Download Report
+          </Button>
           <Button size="sm" onClick={() => setIsUploadOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Record
@@ -161,6 +182,7 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
                 <TableHead>Technician</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Payment Method</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -178,6 +200,9 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
                       {record.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {record.status === 'Paid' ? record.paymentMethod || 'N/A' : 'N/A'}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleViewDetails(record)}>
                       View
@@ -186,7 +211,7 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No records found.
                   </TableCell>
                 </TableRow>

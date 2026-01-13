@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,13 +17,14 @@ import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { Edit, MapPin, Phone, PlusCircle } from 'lucide-react';
+import { Edit, MapPin, Phone, PlusCircle, Download } from 'lucide-react';
 import EditCustomerDialog from './EditCustomerDialog';
 import { setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import AddCustomerDialog from './AddCustomerDialog';
+import { downloadCsv } from '@/lib/utils';
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
@@ -105,6 +107,17 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
     const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
     return format(date, 'P');
   }
+
+  const handleDownloadReport = () => {
+    const dataToExport = customers.map(c => ({
+      Name: c.name,
+      Address: c.address,
+      Phone: c.phone,
+      'Total Jobs': c.totalJobs,
+      'Total Billed': c.totalBilled,
+    }));
+    downloadCsv(dataToExport, `customers-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
   
   return (
     <>
@@ -113,10 +126,16 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground">View customer information and job history.</p>
         </div>
-        <Button size="sm" onClick={() => setIsAddCustomerOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Customer & Job
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
+            <Button size="sm" onClick={() => setIsAddCustomerOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Customer & Job
+            </Button>
+        </div>
       </div>
     <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]">
       <Card className="lg:col-span-1">

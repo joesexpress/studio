@@ -24,7 +24,7 @@ import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-
+import { downloadCsv } from '@/lib/utils';
 
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
@@ -93,6 +93,21 @@ export default function ExpensesPage() {
     setFilters(prev => ({...prev, dateRange}));
   }
 
+  const handleDownloadReport = () => {
+    const dataToExport = filteredExpenses.map(e => {
+        const techName = MOCK_TECHNICIANS.find(t => t.id === e.technicianId)?.name || 'N/A';
+        return {
+            Date: getEntryDate(e),
+            Vendor: e.vendor,
+            Description: e.description,
+            Technician: techName,
+            Amount: e.amount,
+            'Receipt URL': e.receiptUrl,
+        }
+    });
+    downloadCsv(dataToExport, `expenses-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -102,11 +117,15 @@ export default function ExpensesPage() {
             Track your job-related expenses and receipts.
           </p>
         </div>
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center gap-2'>
             <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Displayed</p>
                 <p className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalExpenses)}</p>
             </div>
+             <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
             <Button size="sm" onClick={() => setIsUploadOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Expense

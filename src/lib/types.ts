@@ -1,6 +1,8 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type ServiceRecordStatus = 'Scheduled' | 'Completed' | 'Paid' | 'Owed' | 'Estimate' | 'No Charge' | 'N/A';
+export type PaymentMethod = 'Cash' | 'Card' | 'Check' | 'N/A';
 
 export type ServiceRecord = {
   id: string;
@@ -18,6 +20,7 @@ export type ServiceRecord = {
   description: string;
   total: number;
   status: ServiceRecordStatus;
+  paymentMethod?: PaymentMethod;
   fileUrl: string;
   summary: string;
   // Firestore specific fields

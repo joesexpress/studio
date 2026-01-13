@@ -17,6 +17,8 @@ import RecordDetailsSheet from '@/components/records/RecordDetailsSheet';
 import { format } from 'date-fns';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collectionGroup, query, where } from 'firebase/firestore';
+import { Download } from 'lucide-react';
+import { downloadCsv } from '@/lib/utils';
 
 export default function InvoicesPage() {
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
@@ -50,6 +52,18 @@ export default function InvoicesPage() {
     return invoices.reduce((sum, record) => sum + record.total, 0);
   }, [invoices]);
 
+  const handleDownloadReport = () => {
+    if (!invoices) return;
+    const dataToExport = invoices.map(r => ({
+      Date: getRecordDate(r),
+      Customer: r.customer,
+      Technician: r.technician,
+      Address: r.address,
+      'Amount Owed': r.total,
+    }));
+    downloadCsv(dataToExport, `accounts-receivable-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -57,10 +71,16 @@ export default function InvoicesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Accounts Receivable</h1>
           <p className="text-muted-foreground">A list of all unpaid service records.</p>
         </div>
-         <div className="text-right">
-          <p className="text-sm text-muted-foreground">Total Owed</p>
-          <p className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalOwed)}</p>
-        </div>
+         <div className='flex items-center gap-4'>
+             <div className="text-right">
+              <p className="text-sm text-muted-foreground">Total Owed</p>
+              <p className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalOwed)}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
+         </div>
       </div>
       
       <Card>

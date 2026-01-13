@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { useState } from 'react';
 import {
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import type { ServiceRecord, ServiceRecordStatus } from '@/lib/types';
+import type { ServiceRecord, ServiceRecordStatus, PaymentMethod } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Bot, Edit, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -180,7 +181,7 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                 <div className="grid grid-cols-3 items-center gap-2 text-sm">
                     <Label className="text-muted-foreground">Status</Label>
                     <div className="col-span-2">
-                        <Select name="status" value={currentData.status} onValueChange={(value) => handleSelectChange('status', value)}>
+                        <Select name="status" value={currentData.status} onValueChange={(value) => handleSelectChange('status', value as ServiceRecordStatus)}>
                             <SelectTrigger className="h-8">
                                 <SelectValue placeholder="Select status" />
                             </SelectTrigger>
@@ -195,6 +196,24 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                         </Select>
                     </div>
                 </div>
+                {currentData.status === 'Paid' && (
+                    <div className="grid grid-cols-3 items-center gap-2 text-sm">
+                        <Label className="text-muted-foreground">Payment</Label>
+                        <div className="col-span-2">
+                            <Select name="paymentMethod" value={currentData.paymentMethod} onValueChange={(value) => handleSelectChange('paymentMethod', value as PaymentMethod)}>
+                                <SelectTrigger className="h-8">
+                                    <SelectValue placeholder="Select payment method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Cash">Cash</SelectItem>
+                                    <SelectItem value="Card">Card</SelectItem>
+                                    <SelectItem value="Check">Check</SelectItem>
+                                    <SelectItem value="N/A">N/A</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
       );
@@ -249,6 +268,9 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                         </Badge>
                     </div>
                 </div>
+                {currentData.status === 'Paid' && (
+                     <DetailItem label="Payment" value={currentData.paymentMethod || 'N/A'} />
+                )}
             </div>
         </div>
     );

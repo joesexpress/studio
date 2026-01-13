@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -13,12 +14,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Download } from 'lucide-react';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import AddQuoteDialog from '@/components/quotes/AddQuoteDialog';
 import { Badge } from '@/components/ui/badge';
 import type { QuoteStatus } from '@/lib/types';
+import { downloadCsv } from '@/lib/utils';
 
 const getStatusVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -54,6 +56,21 @@ export default function QuotesPage() {
     return format(date, 'P');
   }
 
+  const handleDownloadReport = () => {
+    if (!quotes) return;
+    const dataToExport = quotes.map(q => ({
+      Created: getQuoteDate(q, 'createdAt'),
+      Customer: q.customerName,
+      Price: q.quotePrice,
+      Status: q.status,
+      Expires: getQuoteDate(q, 'validUntil'),
+      'Scope of Work': q.scopeOfWork,
+      'Labor Required': q.laborRequired,
+      'Materials Needed': q.materialsNeeded,
+    }));
+    downloadCsv(dataToExport, `quotes-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -63,10 +80,16 @@ export default function QuotesPage() {
             Create and manage job quotes for customers.
           </p>
         </div>
-        <Button size="sm" onClick={() => setIsAddQuoteOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Quote
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
+            <Button size="sm" onClick={() => setIsAddQuoteOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Create Quote
+            </Button>
+        </div>
       </div>
 
       <Card>

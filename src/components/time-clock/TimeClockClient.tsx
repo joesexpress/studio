@@ -9,13 +9,13 @@ import { useToast } from '@/hooks/use-toast';
 import type { TimeLog, Technician } from '@/lib/types';
 import { format, differenceInMinutes, formatDistanceStrict, isWithinInterval } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Clock, LogIn, LogOut } from 'lucide-react';
+import { Clock, LogIn, LogOut, Download } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import type { DateRange } from 'react-day-picker';
-import { cn } from '@/lib/utils';
+import { cn, downloadCsv } from '@/lib/utils';
 import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
 
@@ -130,6 +130,18 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   const currentActiveTechnician = technicians.find(t => t.id === activeLog?.technicianId);
   const selectedTechName = technicians.find(t => t.id === selectedTechnician)?.name || 'Select Technician';
 
+  const handleDownloadReport = () => {
+    const dataToExport = filteredLogs.map(log => ({
+      Technician: technicians.find(t => t.id === log.technicianId)?.name || log.technicianId,
+      Date: getRowDate(log.timeIn),
+      'Time In': getFormattedDate(log.timeIn),
+      'Time Out': getFormattedDate(log.timeOut),
+      'Total Hours': (log.totalHours || 0).toFixed(2),
+      Notes: log.notes,
+    }));
+    downloadCsv(dataToExport, `time-log-report-${selectedTechName}-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+
   return (
     <>
     <div className="flex items-center justify-between mb-6">
@@ -184,6 +196,10 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
                 />
               </PopoverContent>
             </Popover>
+            <Button variant="outline" size="sm" onClick={handleDownloadReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Report
+            </Button>
         </div>
       </div>
     <div className="grid gap-6 md:grid-cols-3">
