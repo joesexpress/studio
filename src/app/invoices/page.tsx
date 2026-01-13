@@ -44,7 +44,7 @@ export default function InvoicesPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Outstanding Invoices</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Accounts Receivable</h1>
           <p className="text-muted-foreground">A list of all unpaid service records.</p>
         </div>
          <div className="text-right">

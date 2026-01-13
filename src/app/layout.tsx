@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const logoUrl =
-    'https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png';
+    'https://storage.googleapis.com/project-os-prod-public/dadd1530-9983-4015-9a25-97f439a3f283.png';
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("font-body antialiased", inter.variable, 'bg-background')}>
@@ -95,18 +95,18 @@ export default function RootLayout({
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Invoices">
+                <SidebarMenuButton asChild tooltip="Accounts Receivable">
                   <Link href="/invoices">
                     <FileText />
-                    <span>Invoices</span>
+                    <span>Accounts Receivable</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Jobs">
+                <SidebarMenuButton asChild tooltip="Tasks/Calendar">
                   <Link href="/jobs">
                     <CalendarCheck />
-                    <span>Jobs</span>
+                    <span>Tasks/Calendar</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -119,10 +119,10 @@ export default function RootLayout({
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Orders">
+                <SidebarMenuButton asChild tooltip="Shopping List">
                   <Link href="/orders">
                     <ShoppingCart />
-                    <span>Orders</span>
+                    <span>Shopping List</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

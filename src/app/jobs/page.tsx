@@ -26,7 +26,7 @@ export default function JobsPage() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Jobs</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Tasks/Calendar</h1>
           <p className="text-muted-foreground">Manage your tasks and schedule.</p>
         </div>
       </div>
