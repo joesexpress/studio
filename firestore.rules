@@ -1,0 +1,125 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model where data is segregated by user type (technicians and customers). Each user can only access data within their own document tree, ensuring strong privacy and isolation between users.
+ *
+ * Data Structure: The database has two primary top-level collections: `/technicians` and `/customers`. Each technician and customer document contains a `serviceRecords` subcollection. This structure denormalizes service records to provide separate, secure access points for the technician and the customer involved in a service event.
+ *
+ * Key Security Decisions:
+ * - User Enumeration Disabled: Listing the top-level `/technicians` or `/customers` collections is explicitly disallowed to prevent scraping or discovery of user profiles.
+ * - Strict Path-Based Ownership: All access controls are derived from the document path. A user with UID `abc` can only access documents under `/technicians/abc` or `/customers/abc`, but not `/technicians/xyz`.
+ * - Authorization-Critical Data Integrity: While data shapes are flexible, rules strictly enforce that internal ID fields (`id`, `technicianId`, `customerId`) match the document path upon creation and are immutable upon update. This prevents records from being moved or associated with the wrong owner.
+ *
+ * Denormalization for Authorization: Service records are duplicated under both the technician's and customer's paths (e.g., `/technicians/{techId}/serviceRecords/{recordId}` and `/customers/{custId}/serviceRecords/{recordId}`). This allows for simple, performant ownership checks (e.g., `isOwner(techId)`) without needing cross-collection `get()` calls, which are slow and costly.
+ *
+ * Structural Segregation: Data is naturally segregated by user type and ID. There are no collections that mix public and private data, simplifying list operations and strengthening security.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for reusable logic
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Checks for ownership on an existing document. Used for safe updates and deletes.
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // Validates that the technician document's internal ID matches its path ID.
+    // Enforced on create and update to ensure relational integrity.
+    function hasValidTechnicianData(technicianId) {
+      let incomingData = request.resource.data;
+      return incomingData.id == technicianId;
+    }
+
+    // Validates that the customer document's internal ID matches its path ID.
+    // Enforced on create and update to ensure relational integrity.
+    function hasValidCustomerData(customerId) {
+      let incomingData = request.resource.data;
+      return incomingData.id == customerId;
+    }
+
+    // Validates that a service record's internal technicianId matches the path.
+    function technicianOwnsRecord(technicianId) {
+      let incomingData = request.resource.data;
+      return incomingData.technicianId == technicianId;
+    }
+
+    // Validates that a service record's internal customerId matches the path.
+    function customerOwnsRecord(customerId) {
+      let incomingData = request.resource.data;
+      return incomingData.customerId == customerId;
+    }
+
+    /**
+     * @description Controls access to technician profile documents.
+     * @path /technicians/{technicianId}
+     * @allow A technician (auth.uid='tech123') can read their own profile at `/technicians/tech123`. (get)
+     * @deny An anonymous user cannot read any technician profile. (get)
+     * @deny A technician (auth.uid='tech123') cannot list all other technicians. (list)
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /technicians/{technicianId} {
+      allow get: if isOwner(technicianId);
+      allow list: if false;
+      allow create: if isOwner(technicianId) && hasValidTechnicianData(technicianId);
+      allow update: if isExistingOwner(technicianId) && hasValidTechnicianData(technicianId);
+      allow delete: if isExistingOwner(technicianId);
+    }
+
+    /**
+     * @description Controls access to customer profile documents.
+     * @path /customers/{customerId}
+     * @allow A customer (auth.uid='cust456') can create their own profile at `/customers/cust456`. (create)
+     * @deny A technician (auth.uid='tech123') cannot read a customer's profile at `/customers/cust456`. (get)
+     * @deny Any authenticated user cannot list all customers. (list)
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /customers/{customerId} {
+      allow get: if isOwner(customerId);
+      allow list: if false;
+      allow create: if isOwner(customerId) && hasValidCustomerData(customerId);
+      allow update: if isExistingOwner(customerId) && hasValidCustomerData(customerId);
+      allow delete: if isExistingOwner(customerId);
+    }
+
+    /**
+     * @description Controls access to a technician's view of service records.
+     * @path /technicians/{technicianId}/serviceRecords/{serviceRecordId}
+     * @allow A technician (auth.uid='tech123') can list all records in their subcollection at `/technicians/tech123/serviceRecords`. (list)
+     * @allow A technician (auth.uid='tech123') can create a new record in `/technicians/tech123/serviceRecords`. (create)
+     * @deny A customer (auth.uid='cust456') cannot read a service record from a technician's path. (get)
+     * @deny A technician cannot create a record where the document's `technicianId` field does not match their own UID. (create)
+     * @principle Enforces document ownership for all operations and validates relational integrity.
+     */
+    match /technicians/{technicianId}/serviceRecords/{serviceRecordId} {
+      allow get: if isOwner(technicianId);
+      allow list: if isOwner(technicianId);
+      allow create: if isOwner(technicianId) && technicianOwnsRecord(technicianId);
+      allow update: if isExistingOwner(technicianId) && technicianOwnsRecord(technicianId);
+      allow delete: if isExistingOwner(technicianId);
+    }
+
+    /**
+     * @description Controls access to a customer's view of service records.
+     * @path /customers/{customerId}/serviceRecords/{serviceRecordId}
+     * @allow A customer (auth.uid='cust456') can read their own service record at `/customers/cust456/serviceRecords/rec789`. (get)
+     * @allow A customer (auth.uid='cust456') can list all records in their subcollection. (list)
+     * @deny A technician (auth.uid='tech123') cannot list a customer's service records. (list)
+     * @deny A customer cannot create a record where the document's `customerId` field does not match their own UID. (create)
+     * @principle Enforces document ownership for all operations and validates relational integrity.
+     */
+    match /customers/{customerId}/serviceRecords/{serviceRecordId} {
+      allow get: if isOwner(customerId);
+      allow list: if isOwner(customerId);
+      allow create: if isOwner(customerId) && customerOwnsRecord(customerId);
+      allow update: if isExistingOwner(customerId) && customerOwnsRecord(customerId);
+      allow delete: if isExistingOwner(customerId);
+    }
+  }
+}
