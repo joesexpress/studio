@@ -70,3 +70,14 @@ export type CalendarEvent = {
   description?: string;
   technicianId: string;
 };
+
+export type Expense = {
+  id: string;
+  date: string | Timestamp;
+  technicianId: string;
+  amount: number;
+  description: string;
+  vendor: string;
+  receiptUrl: string;
+  serviceRecordId?: string;
+}
