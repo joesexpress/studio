@@ -1,15 +1,20 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, ServiceRecord } from '@/lib/types';
 import DashboardClient from '@/components/dashboard/DashboardClient';
+import DashboardFilters from '@/components/dashboard/DashboardFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, Wrench } from 'lucide-react';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, parseISO, isWithinInterval } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 
-function useDashboardData(serviceRecords: ServiceRecord[] | null) {
+function useDashboardData(
+  serviceRecords: ServiceRecord[] | null,
+  filters: { dateRange: DateRange | undefined, technician: string, status: string }
+) {
   return useMemo(() => {
     if (!serviceRecords) {
       return {
@@ -19,16 +24,29 @@ function useDashboardData(serviceRecords: ServiceRecord[] | null) {
         totalRevenue: 0,
         totalCustomers: 0,
         totalJobs: 0,
+        uniqueTechnicians: [],
       };
     }
+    
+    const uniqueTechnicians = Array.from(new Set(serviceRecords.map(r => r.technician).filter(Boolean))).sort();
+
+    const filteredRecords = serviceRecords.filter(record => {
+      const recordDate = record.date ? (record.date as any).toDate() : new Date();
+
+      const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
+      const techMatch = !filters.technician || record.technician === filters.technician;
+      const statusMatch = !filters.status || record.status === filters.status;
+      
+      return dateMatch && techMatch && statusMatch;
+    });
 
     const technicians: { [key: string]: TechnicianPerformance } = {};
     const revenueByMonth: { [key: string]: number } = {};
     const statusCounts: { [key in ServiceRecordStatus]?: number } = {};
     let totalRevenue = 0;
 
-    serviceRecords.forEach(record => {
-      const recordDate = record.date instanceof Date ? record.date : (record.date as any).toDate();
+    filteredRecords.forEach(record => {
+      const recordDate = (record.date as any).toDate();
 
       // Technician Performance
       if (!technicians[record.technician]) {
@@ -67,14 +85,19 @@ function useDashboardData(serviceRecords: ServiceRecord[] | null) {
       value: count!,
     }));
     
-    const totalCustomers = new Set(serviceRecords.map(r => r.customer)).size;
+    const totalCustomers = new Set(filteredRecords.map(r => r.customer)).size;
 
-    return { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs: serviceRecords.length };
-  }, [serviceRecords]);
+    return { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs: filteredRecords.length, uniqueTechnicians };
+  }, [serviceRecords, filters]);
 }
 
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
+  const [filters, setFilters] = useState({
+    dateRange: undefined as DateRange | undefined,
+    technician: '',
+    status: '',
+  });
 
   const serviceRecordsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -83,7 +106,7 @@ export default function DashboardPage() {
 
   const { data: serviceRecords, isLoading } = useCollection<ServiceRecord>(serviceRecordsQuery);
 
-  const { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs } = useDashboardData(serviceRecords);
+  const { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs, uniqueTechnicians } = useDashboardData(serviceRecords, filters);
 
   if (isLoading) {
     return <div>Loading dashboard...</div>;
@@ -91,6 +114,19 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+       <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Analytics for your service records.</p>
+        </div>
+      </div>
+
+      <DashboardFilters 
+        filters={filters}
+        onFiltersChange={setFilters}
+        technicians={uniqueTechnicians}
+      />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -101,7 +137,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-bold">
               {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground">Based on all paid and owed jobs</p>
+            <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
         </Card>
         <Card>
@@ -111,7 +147,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{totalJobs}</div>
-            <p className="text-xs text-muted-foreground">Across all service records</p>
+            <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
         </Card>
         <Card>
@@ -121,7 +157,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">Served this period</p>
+            <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
         </Card>
       </div>

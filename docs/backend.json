@@ -155,6 +155,35 @@
         "id",
         "name"
       ]
+    },
+    "Todo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Todo",
+      "type": "object",
+      "description": "Represents a to-do item for a technician.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the to-do item." },
+        "task": { "type": "string", "description": "The description of the task." },
+        "isCompleted": { "type": "boolean", "description": "Whether the task is completed." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the task was created." },
+        "technicianId": { "type": "string", "description": "The ID of the technician this to-do belongs to." }
+      },
+      "required": ["id", "task", "isCompleted", "createdAt", "technicianId"]
+    },
+    "CalendarEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CalendarEvent",
+      "type": "object",
+      "description": "Represents an event on the technician's calendar.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the event." },
+        "title": { "type": "string", "description": "The title of the event." },
+        "start": { "type": "string", "format": "date-time", "description": "The start date and time of the event." },
+        "end": { "type": "string", "format": "date-time", "description": "The end date and time of the event." },
+        "description": { "type": "string", "description": "A description of the event." },
+        "technicianId": { "type": "string", "description": "The ID of the technician this event belongs to." }
+      },
+      "required": ["id", "title", "start", "end", "technicianId"]
     }
   },
   "auth": {
@@ -236,6 +265,30 @@
             }
           ]
         }
+      },
+      {
+        "path": "/technicians/{technicianId}/todos/{todoId}",
+        "definition": {
+            "entityName": "Todo",
+            "schema": { "$ref": "#/backend/entities/Todo" },
+            "description": "Stores to-do items for a technician.",
+            "params": [
+                { "name": "technicianId", "description": "The unique identifier for the technician." },
+                { "name": "todoId", "description": "The unique identifier for the to-do item." }
+            ]
+        }
+      },
+      {
+          "path": "/technicians/{technicianId}/calendarEvents/{eventId}",
+          "definition": {
+              "entityName": "CalendarEvent",
+              "schema": { "$ref": "#/backend/entities/CalendarEvent" },
+              "description": "Stores calendar events for a technician.",
+              "params": [
+                  { "name": "technicianId", "description": "The unique identifier for the technician." },
+                  { "name": "eventId", "description": "The unique identifier for the calendar event." }
+              ]
+          }
       }
     ],
     "reasoning": "The Firestore structure is designed to be secure, scalable, and easily debuggable, adhering to the core design principles and strategy mandates. It prioritizes authorization independence through denormalization, ensuring that security rules can be simple and robust. The structure supports the required QAPs by segregating data with different access needs into separate collections.\n\nAuthorization Independence:\nServiceRecord subcollections under technician and customer will contain denormalized copies of technicianId and customerId in each document.\n\nQAPs:\nList operations are secured by the path-based ownership, allowing the list function to be performed without get() calls.\n\nEach collection is designed with a homogeneous security posture, making rules easier to understand and maintain. The use of explicit state modeling with the 'status' field ensures data clarity and predictability."

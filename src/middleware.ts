@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    if (pathname !== '/' && !pathname.startsWith('/records') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/customers')) {
+    if (pathname !== '/' && !pathname.startsWith('/records') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/customers') && !pathname.startsWith('/invoices')) {
        // If trying to access something else, maybe go to login?
        // For now, let's allow it but a real app would lock this down.
     }

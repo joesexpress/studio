@@ -53,3 +53,20 @@ export type Technician = {
   phone: string;
   email: string;
 };
+
+export type Todo = {
+  id: string;
+  task: string;
+  isCompleted: boolean;
+  createdAt: Timestamp;
+  technicianId: string;
+};
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  start: Date | Timestamp;
+  end: Date | Timestamp;
+  description?: string;
+  technicianId: string;
+};

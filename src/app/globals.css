@@ -1,3 +1,4 @@
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -85,4 +86,22 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.rbc-calendar {
+    --rbc-accent-color: hsl(var(--primary));
+    --rbc-background-color: hsl(var(--card));
+    --rbc-text-color: hsl(var(--card-foreground));
+    --rbc-border-color: hsl(var(--border));
+    --rbc-today-highlight-color: hsl(var(--primary) / 0.1);
+    --rbc-button-background: hsl(var(--secondary));
+    --rbc-button-text-color: hsl(var(--secondary-foreground));
+}
+
+.rbc-toolbar button {
+    @apply text-foreground;
+}
+
+.rbc-toolbar button:active, .rbc-toolbar button.rbc-active {
+    @apply bg-primary/20;
 }

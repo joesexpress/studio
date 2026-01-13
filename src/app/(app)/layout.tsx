@@ -11,7 +11,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { AppWindow, BarChart3, Settings, Users } from 'lucide-react';
+import { AppWindow, BarChart3, Settings, Users, CalendarCheck, FileText } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getPlaceholderImage } from '@/lib/placeholder-data';
@@ -60,6 +60,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Link href="/customers">
                     <Users />
                     <span>Customers</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Invoices">
+                  <Link href="/invoices">
+                    <FileText />
+                    <span>Invoices</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Jobs">
+                  <Link href="/jobs">
+                    <CalendarCheck />
+                    <span>Jobs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

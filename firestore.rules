@@ -55,6 +55,11 @@ service cloud.firestore {
       let incomingData = request.resource.data;
       return incomingData.customerId == customerId;
     }
+    
+    function ownsItem(technicianId) {
+        let incomingData = request.resource.data;
+        return incomingData.technicianId == technicianId;
+    }
 
     /**
      * @description Controls access to technician profile documents.
@@ -120,6 +125,24 @@ service cloud.firestore {
       allow create: if isOwner(customerId) && customerOwnsRecord(customerId);
       allow update: if isExistingOwner(customerId) && customerOwnsRecord(customerId);
       allow delete: if isExistingOwner(customerId);
+    }
+    
+    /**
+     * @description Controls access to a technician's to-do items.
+     * @path /technicians/{technicianId}/todos/{todoId}
+     * @principle Only the owner technician can manage their own to-do items.
+     */
+    match /technicians/{technicianId}/todos/{todoId} {
+      allow read, write: if isOwner(technicianId) && ownsItem(technicianId);
+    }
+
+    /**
+     * @description Controls access to a technician's calendar events.
+     * @path /technicians/{technicianId}/calendarEvents/{eventId}
+     * @principle Only the owner technician can manage their own calendar events.
+     */
+    match /technicians/{technicianId}/calendarEvents/{eventId} {
+        allow read, write: if isOwner(technicianId) && ownsItem(technicianId);
     }
   }
 }
