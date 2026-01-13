@@ -16,6 +16,12 @@ import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
+import { Edit, MapPin, Phone } from 'lucide-react';
+import EditCustomerDialog from './EditCustomerDialog';
+import { setDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
@@ -34,10 +40,20 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(customers[0] || null);
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
+  const [isEditCustomerOpen, setIsEditCustomerOpen] = React.useState(false);
+
+  const { firestore } = useFirebase();
+  const { toast } = useToast();
 
   React.useEffect(() => {
     if (!selectedCustomer && customers.length > 0) {
         setSelectedCustomer(customers[0]);
+    } else if (selectedCustomer) {
+      // Update selected customer with fresh data from the list
+      const freshCustomer = customers.find(c => c.id === selectedCustomer.id);
+      if (freshCustomer) {
+        setSelectedCustomer(freshCustomer);
+      }
     }
   }, [customers, selectedCustomer]);
 
@@ -45,6 +61,38 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
     setSelectedRecord(record);
     setIsDetailsOpen(true);
   };
+
+  const handleUpdateCustomer = (updatedCustomer: Partial<Customer>) => {
+    if (!firestore || !selectedCustomer) return;
+    const customerRef = doc(firestore, 'customers', selectedCustomer.id);
+    
+    const customerDataToUpdate = {
+        name: updatedCustomer.name || selectedCustomer.name,
+        address: updatedCustomer.address || selectedCustomer.address,
+        phone: updatedCustomer.phone || selectedCustomer.phone,
+    };
+
+    setDocumentNonBlocking(customerRef, customerDataToUpdate, { merge: true });
+
+    toast({
+        title: 'Customer Updated',
+        description: 'The customer details have been saved.',
+    });
+  }
+
+  const handleRecordUpdate = (updatedRecord: ServiceRecord) => {
+     // This is a bit of a trick to force a re-render with fresh data.
+     // In a more complex app, you might use a state management library.
+     const updatedCustomers = customers.map(c => {
+       if (c.id === updatedRecord.customerId) {
+         const newRecords = c.records.map(r => r.id === updatedRecord.id ? updatedRecord : r);
+         return {...c, records: newRecords};
+       }
+       return c;
+     });
+     // This won't work directly as customers is a prop.
+     // The parent component (`customers/page.tsx`) will get fresh data from Firestore automatically.
+  }
 
   const getRecordDate = (record: ServiceRecord) => {
     if (!record.date) return 'N/A';
@@ -87,10 +135,22 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
         {selectedCustomer ? (
           <>
             <CardHeader>
-              <CardTitle>{selectedCustomer.name}</CardTitle>
-              <CardDescription>
-                {selectedCustomer.address} &bull; {selectedCustomer.phone}
-              </CardDescription>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <CardTitle>{selectedCustomer.name}</CardTitle>
+                        <CardDescription className="flex items-center gap-4 mt-2">
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCustomer.address)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
+                                <MapPin className="h-4 w-4" /> {selectedCustomer.address}
+                            </a>
+                            <a href={`tel:${selectedCustomer.phone}`} className="flex items-center gap-2 hover:underline">
+                                <Phone className="h-4 w-4" /> {selectedCustomer.phone}
+                            </a>
+                        </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setIsEditCustomerOpen(true)}>
+                        <Edit className="mr-2 h-4 w-4" /> Edit
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
@@ -154,7 +214,14 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
         isOpen={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         record={selectedRecord}
+        onRecordUpdated={handleRecordUpdate}
       />
+    <EditCustomerDialog
+        isOpen={isEditCustomerOpen}
+        onOpenChange={setIsEditCustomerOpen}
+        customer={selectedCustomer}
+        onSave={handleUpdateCustomer}
+    />
     </>
   );
 }

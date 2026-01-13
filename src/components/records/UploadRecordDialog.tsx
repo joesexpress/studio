@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { processServiceRecord } from '@/app/actions';
 import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
+import { useFirebase } from '@/firebase';
 
 type UploadRecordDialogProps = {
   isOpen: boolean;
@@ -25,6 +26,7 @@ type UploadRecordDialogProps = {
 
 export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded }: UploadRecordDialogProps) {
   const { toast } = useToast();
+  const { user } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -44,6 +46,14 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
       });
       return;
     }
+    if (!user) {
+        toast({
+            title: 'Not Authenticated',
+            description: 'You must be signed in to upload a record.',
+            variant: 'destructive',
+        });
+        return;
+    }
 
     setIsUploading(true);
 
@@ -53,6 +63,7 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
       const fileDataUri = reader.result as string;
       const formData = new FormData();
       formData.append('file', fileDataUri);
+      formData.append('technicianId', user.uid);
       
       const result = await processServiceRecord(formData);
 
@@ -61,7 +72,8 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
           title: 'Upload Successful',
           description: 'The service record has been processed and added.',
         });
-        onRecordAdded(result.record as ServiceRecord);
+        // The onRecordAdded callback is less critical now due to real-time updates
+        // onRecordAdded(result.record as ServiceRecord); 
         onOpenChange(false);
       } else {
         toast({

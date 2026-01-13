@@ -21,8 +21,8 @@ export type ServiceRecord = {
   fileUrl: string;
   summary: string;
   // Firestore specific fields
-  technicianId?: string;
-  customerId?: string;
+  technicianId: string;
+  customerId: string;
 };
 
 export type TechnicianPerformance = {
@@ -41,6 +41,7 @@ export type Customer = {
   name: string;
   address: string;
   phone: string;
+  email?: string;
   totalJobs: number;
   totalBilled: number;
   records: ServiceRecord[];
