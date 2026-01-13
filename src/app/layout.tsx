@@ -2,7 +2,6 @@
 import type {Metadata} from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -34,6 +33,7 @@ import {
 } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { FirebaseClientProvider } from '@/firebase';
+import { ToasterProvider } from '@/components/toaster-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -190,7 +190,7 @@ export default function RootLayout({
         </SidebarInset>
       </SidebarProvider>
     </FirebaseClientProvider>
-        <Toaster />
+        <ToasterProvider />
       </body>
     </html>
   );
