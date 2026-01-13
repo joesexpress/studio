@@ -11,14 +11,12 @@ import { getAuth } from 'firebase/auth';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 const fileSchema = z.object({
-  fileDataUri: z.string().refine(val => val.startsWith('data:'), {
-    message: 'File data must be a valid data URI',
-  }),
+  fileUrl: z.string().url({ message: 'File must be a valid URL' }),
 });
 
 export async function processServiceRecord(formData: FormData) {
   const rawFormData = {
-    fileDataUri: formData.get('file'),
+    fileUrl: formData.get('fileUrl'),
     technicianId: formData.get('technicianId'),
   };
 
@@ -30,11 +28,11 @@ export async function processServiceRecord(formData: FormData) {
     return { success: false, error: "Invalid form data." };
   }
   
-  const { fileDataUri, technicianId } = validation.data;
+  const { fileUrl, technicianId } = validation.data;
   const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
 
   try {
-    const extractedData = await extractDataFromServiceRecord({ documentDataUri: fileDataUri });
+    const extractedData = await extractDataFromServiceRecord({ documentDataUri: fileUrl });
     const summaryData = await summarizeServiceRecord({ recordText: extractedData.descriptionOfWork });
 
     const total = parseFloat(extractedData.totalCost.replace(/[^0-9.-]+/g,"")) || 0;
@@ -57,7 +55,7 @@ export async function processServiceRecord(formData: FormData) {
       breakdown: extractedData.breakdown,
       description: extractedData.descriptionOfWork,
       total: total,
-      fileUrl: '#', // Placeholder, you might want to upload the file to Firebase Storage
+      fileUrl: fileUrl,
       technicianId: technicianId,
       customerId: customerId,
       status: (extractedData.status as any) || 'N/A'

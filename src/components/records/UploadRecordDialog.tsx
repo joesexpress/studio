@@ -17,6 +17,7 @@ import { processServiceRecord } from '@/app/actions';
 import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { useFirebase } from '@/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type UploadRecordDialogProps = {
   isOpen: boolean;
@@ -26,6 +27,7 @@ type UploadRecordDialogProps = {
 
 export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded }: UploadRecordDialogProps) {
   const { toast } = useToast();
+  const { storage } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[] | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -58,6 +60,10 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
       });
       return;
     }
+    if (!storage) {
+        toast({ title: 'Storage service not available', variant: 'destructive' });
+        return;
+    }
     
     setIsUploading(true);
     
@@ -67,15 +73,17 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
     });
 
     const uploadPromises = selectedFiles.map(file => {
-      return new Promise<{ success: boolean, fileName: string, error?: string }>((resolve) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        
-        reader.onload = async () => {
-          try {
-            const fileDataUri = reader.result as string;
+      return new Promise<{ success: boolean, fileName: string, error?: string }>(async (resolve) => {
+        try {
+            // 1. Upload file to Firebase Storage
+            const filePath = `service-records/${mockUserId}/${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, filePath);
+            const uploadResult = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(uploadResult.ref);
+
+            // 2. Pass the URL to the server action
             const formData = new FormData();
-            formData.append('file', fileDataUri);
+            formData.append('fileUrl', downloadURL);
             formData.append('technicianId', mockUserId);
             
             const result = await processServiceRecord(formData);
@@ -83,16 +91,16 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
             if (!result.success) {
               resolve({ success: false, fileName: file.name, error: result.error });
             } else {
+              if (result.record) {
+                // This will optimistically update the UI, but page reload will show the source of truth
+                onRecordAdded(result.record);
+              }
               resolve({ success: true, fileName: file.name });
             }
-          } catch (e) {
-            resolve({ success: false, fileName: file.name, error: 'An unexpected error occurred during processing.' });
-          }
-        };
-
-        reader.onerror = () => {
-            resolve({ success: false, fileName: file.name, error: `Could not read the file.` });
-        };
+        } catch (e: any) {
+            console.error(`Error processing ${file.name}:`, e);
+            resolve({ success: false, fileName: file.name, error: e.message || 'An unexpected error occurred during processing.' });
+        }
       });
     });
 
@@ -106,7 +114,7 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
     if (failedUploads.length > 0) {
         toast({
             title: 'Some Uploads Failed',
-            description: `${failedUploads.map(f => f.fileName).join(', ')}. Please check the files and try again.`,
+            description: `${failedUploads.map(f => f.fileName).join(', ')}. Reason: ${failedUploads[0].error}`,
             variant: 'destructive',
             duration: 10000,
         });
