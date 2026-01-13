@@ -2,7 +2,7 @@
 'use client';
 
 import TimeClockClient from '@/components/time-clock/TimeClockClient';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import type { TimeLog } from '@/lib/types';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 
 export default function TimeClockPage() {
   const { firestore } = useFirebase();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const [allTimeLogs, setAllTimeLogs] = useState<TimeLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,7 +19,7 @@ export default function TimeClockPage() {
 
   useEffect(() => {
     const fetchLogs = async () => {
-        if (!firestore) return;
+        if (!firestore || !user) return;
         setIsLoading(true);
         const logs: TimeLog[] = [];
         const techIds = MOCK_TECHNICIANS.map(t => t.id);
@@ -42,11 +43,15 @@ export default function TimeClockPage() {
         }
     };
 
-    fetchLogs();
+    if (!isAuthLoading && user) {
+        fetchLogs();
+    } else if (!isAuthLoading && !user) {
+        setIsLoading(false);
+    }
 
-  }, [firestore]);
+  }, [firestore, user, isAuthLoading]);
   
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return <div>Loading time clock...</div>
   }
 

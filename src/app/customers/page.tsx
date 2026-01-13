@@ -3,18 +3,19 @@
 
 import type { Customer, ServiceRecord } from '@/lib/types';
 import CustomersClient from '@/components/customers/CustomersClient';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 export default function CustomersPage() {
   const { firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCustomersAndRecords = async () => {
-      if (!firestore) return;
+      if (!firestore || !user) return;
       setIsLoading(true);
       try {
         const customersColRef = collection(firestore, 'customers');
@@ -50,12 +51,19 @@ export default function CustomersPage() {
         setIsLoading(false);
       }
     };
+    
+    // Only fetch data if the user is loaded and authenticated
+    if (!isUserLoading && user) {
+        fetchCustomersAndRecords();
+    } else if (!isUserLoading && !user) {
+        // Handle the case where there is no user after loading
+        setIsLoading(false);
+    }
 
-    fetchCustomersAndRecords();
-  }, [firestore]);
+  }, [firestore, user, isUserLoading]);
 
 
-  if (isLoading) {
+  if (isLoading || isUserLoading) {
     return <div>Loading customers...</div>
   }
 

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, Wrench, UserMinus, UserCheck } from 'lucide-react';
 import { format, isWithinInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { collectionGroup, getDocs, query, collection } from 'firebase/firestore';
 
 
@@ -139,13 +139,14 @@ export default function DashboardPage() {
   });
 
   const { firestore } = useFirebase();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
   const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
-        if (!firestore) return;
+        if (!firestore || !user) return;
         setIsLoading(true);
         try {
             const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
@@ -168,8 +169,13 @@ export default function DashboardPage() {
             setIsLoading(false);
         }
     }
-    fetchAllData();
-  }, [firestore]);
+    
+    if (!isAuthLoading && user) {
+        fetchAllData();
+    } else if (!isAuthLoading && !user) {
+        setIsLoading(false);
+    }
+  }, [firestore, user, isAuthLoading]);
 
 
   const { 
@@ -184,7 +190,7 @@ export default function DashboardPage() {
     totalCustomerCount
 } = useDashboardData(serviceRecords, allCustomers, filters);
 
-  if (isLoading) {
+  if (isLoading || isAuthLoading) {
     return <div>Loading dashboard data...</div>
   }
 

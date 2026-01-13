@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
-import { FirebaseProvider, useFirebase } from '@/firebase/provider';
-import { initializeFirebase } from '@/firebase';
+import { FirebaseProvider } from '@/firebase/provider';
+import { initializeFirebase, initiateAnonymousSignIn } from '@/firebase';
 
 function AuthHandler({ children }: { children: ReactNode }) {
-  // This component is now a pass-through as auth state is not managed on the client.
+  const { auth, user, isUserLoading } = useFirebase();
+
+  useEffect(() => {
+    // When the initial user check is complete and there's no user,
+    // automatically sign them in anonymously.
+    if (!isUserLoading && !user && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [isUserLoading, user, auth]);
+
   return <>{children}</>;
 }
 
