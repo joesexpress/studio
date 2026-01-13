@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   SidebarProvider,
   Sidebar,
@@ -10,7 +11,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { AppWindow, BarChart3, Wrench, Settings, Users } from 'lucide-react';
+import { AppWindow, BarChart3, Settings, Users } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getPlaceholderImage } from '@/lib/placeholder-data';
@@ -23,11 +24,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Wrench className="h-6 w-6 text-primary" />
-            </Button>
-            <h1 className="text-lg font-semibold tracking-tight">HVAC Analyzer</h1>
+          <div className="flex items-center justify-center p-2">
+            <Image
+                src="https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png"
+                alt="K & D Refrigeration & Heating"
+                width={180}
+                height={50}
+                className="w-auto h-auto"
+            />
           </div>
         </SidebarHeader>
         <SidebarContent>
