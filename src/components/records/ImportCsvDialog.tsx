@@ -62,6 +62,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             // A simple way to refresh the data is to reload the page.
             window.location.reload();
         } else {
+            // Use the specific error from the server action
             throw new Error(result.error || 'An unknown error occurred during import.');
         }
 
@@ -71,10 +72,10 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             title: 'Import Failed',
             description: e.message,
             variant: 'destructive',
+            duration: 10000, // Show error for longer
         });
     } finally {
         setIsUploading(false);
-        onDialogClose(false);
     }
   };
   
@@ -99,7 +100,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
                 <AlertTitle>Required CSV Format</AlertTitle>
                 <AlertDescription className="text-xs">
                     Your file must contain these exact headers: <br/>
-                    <code className="font-mono bg-muted p-1 rounded-sm">Date,Tech,Customer,Address,Phone,Model,Serial,Filter Size,Freon,Times,Total Hours,Breakdown,Full Description of Work,Total,Status,File Link</code>
+                    <code className="font-mono bg-muted p-1 rounded-sm">Date,Tech,Customer,Address,Phone,Model,Serial,Filter Size,Freon,Total Hours,Breakdown,Full Description of Work,Total,Status,File Link</code>
                 </AlertDescription>
             </Alert>
             <div 
@@ -148,3 +149,5 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
     </Dialog>
   );
 }
+
+    
