@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -99,7 +100,11 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
       const customerMatch = !filters.customer || record.customerId === filters.customer;
       const statusMatch = filters.status.length === 0 || filters.status.includes(record.status);
 
-      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
+      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : null;
+      if (!recordDate || isNaN(recordDate.getTime())) {
+        return false; // Exclude records with invalid dates
+      }
+
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
 
       return searchMatch && techMatch && customerMatch && statusMatch && dateMatch;
@@ -126,8 +131,13 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
 
   const getRecordDate = (record: ServiceRecord) => {
     if (!record.date) return 'N/A';
-    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
-    return format(date, 'P');
+    try {
+      const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return format(date, 'P');
+    } catch {
+      return "Invalid Date";
+    }
   }
 
   const handleDownloadReport = () => {

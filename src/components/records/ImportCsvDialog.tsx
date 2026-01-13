@@ -75,15 +75,14 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       let processedCount = 0;
 
       const customerCache = new Map<string, Customer>();
+      const writePromises: Promise<any>[] = [];
 
-      // First pass: build a cache of existing customers
+      // Pre-fill customer cache
       const allCustomerDocs = await getDocs(collection(firestore, 'customers'));
       allCustomerDocs.forEach(doc => {
           const customer = doc.data() as Customer;
           customerCache.set(customer.name.trim().toLowerCase(), customer);
       });
-
-      const writePromises: Promise<any>[] = [];
   
       for (const [index, record] of records.entries()) {
         const customerName = record.Customer || 'N/A';
@@ -104,28 +103,30 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         let customer = customerCache.get(normalizedCustomerName);
 
         if (!customer) {
-            customerId = `cust-${Date.now()}-${index}`;
+            const newCustomerId = `cust-${normalizedCustomerName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}`;
             const newCustomerData: Partial<Customer> = {
-                id: customerId,
+                id: newCustomerId,
                 name: customerName.trim(),
                 address: record.Address || 'N/A',
                 phone: record.Phone || 'N/A',
             };
-            const customerDocRef = doc(firestore, 'customers', customerId);
+            const customerDocRef = doc(firestore, 'customers', newCustomerId);
             writePromises.push(setDoc(customerDocRef, newCustomerData, { merge: true }));
-            customerCache.set(normalizedCustomerName, newCustomerData as Customer);
-            customerId = newCustomerData.id!;
+            customer = newCustomerData as Customer;
+            customerCache.set(normalizedCustomerName, customer);
+            customerId = newCustomerId;
         } else {
             customerId = customer.id;
         }
   
-        const recordId = `rec-${customerId}-${Date.now()}-${index}`;
+        const recordId = `rec-${customerId}-${record.Date ? new Date(record.Date).getTime() : Date.now()}-${index}`;
   
         const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
         
         let recordDate;
         if (record.Date) {
           const parsedDate = new Date(record.Date);
+          // Check if the parsed date is valid. If not, default to now.
           if (!isNaN(parsedDate.getTime())) {
             recordDate = parsedDate;
           } else {
@@ -268,5 +269,3 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
     </Dialog>
   );
 }
-
-    
