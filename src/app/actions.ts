@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { extractDataFromServiceRecord } from "@/ai/flows/extract-data-from-service-records";
 import { summarizeServiceRecord } from "@/ai/flows/summarize-service-records";
 import { z } from "zod";
-import { doc, serverTimestamp, collection, getFirestore } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, getFirestore, setDoc } from 'firebase/firestore';
 import { initializeFirebase as initializeFirebaseClient, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import type { ServiceRecord, Customer, Technician } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
@@ -215,6 +215,7 @@ export async function processCsvImport(formData: FormData) {
       const firebaseApp = initializeFirebaseServer();
       const firestore = getFirestore(firebaseApp);
       let processedCount = 0;
+      const writePromises: Promise<any>[] = [];
   
       for (const record of records) {
         const customerName = record.Customer || 'N/A';
@@ -269,23 +270,25 @@ export async function processCsvImport(formData: FormData) {
   
         // Save to technician's subcollection
         const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-        setDocumentNonBlocking(techRecordRef, newRecord, {});
+        writePromises.push(setDoc(techRecordRef, newRecord));
   
         // Save to customer's subcollection
         const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-        setDocumentNonBlocking(customerRecordRef, newRecord, {});
+        writePromises.push(setDoc(customerRecordRef, newRecord));
   
         // Also save/update the main customer profile
         const customerDocRef = doc(firestore, 'customers', customerId);
-        setDocumentNonBlocking(customerDocRef, {
+        writePromises.push(setDoc(customerDocRef, {
           id: customerId,
           name: customerName,
           address: record.Address || 'N/A',
           phone: record.Phone || 'N/A',
-        }, { merge: true });
+        }, { merge: true }));
         
         processedCount++;
       }
+      
+      await Promise.all(writePromises);
   
       revalidatePath("/records", 'layout');
       revalidatePath("/customers", 'layout');
