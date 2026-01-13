@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -9,25 +10,11 @@ import { getStorage } from 'firebase/storage';
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
-    let firebaseApp;
-    try {
-      // In a deployed Firebase App Hosting environment, this will succeed.
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // This will fail in local development or other environments.
-      // Fallback to using the explicit config.
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('Automatic Firebase initialization failed, falling back to config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
-    }
-    return getSdks(firebaseApp);
+    return getSdks(initializeApp(firebaseConfig));
   }
-
   // If already initialized, return the SDKs with the already initialized App
   return getSdks(getApp());
 }
-
 
 export function getSdks(firebaseApp: FirebaseApp) {
   return {
@@ -37,6 +24,11 @@ export function getSdks(firebaseApp: FirebaseApp) {
     storage: getStorage(firebaseApp),
   };
 }
+
+export const firebaseInstance = initializeFirebase();
+
+// Server-side initialization
+export * as server from './server';
 
 export * from './provider';
 export * from './client-provider';

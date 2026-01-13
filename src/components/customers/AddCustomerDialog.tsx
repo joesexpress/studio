@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,10 +18,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import type { Customer, ServiceRecord } from '@/lib/types';
+import type { Customer } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
 
 
 type AddCustomerDialogProps = {
@@ -82,11 +83,6 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
   };
 
   const createNewCustomerAndJob = async () => {
-     if (!firestore) {
-        toast({ title: "Database not ready", variant: "destructive"});
-        setIsSaving(false);
-        return;
-    }
     if (!technicianId) {
         toast({
             title: 'Validation Error',
@@ -97,51 +93,26 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
         return;
     }
 
-    const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
-    const customerId = `cust-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
-    const recordId = `rec-${Date.now()}`;
-
-    const customerData: Partial<Customer> = {
-      id: customerId,
-      name,
-      address,
-      phone,
-    };
-
-    const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
-      id: recordId,
-      date: new Date(),
-      technician: technicianName,
-      customer: name,
-      address,
-      phone,
-      model: 'N/A',
-      serial: 'N/A',
-      filterSize: 'N/A',
-      freonType: 'N/A',
-      laborHours: 'N/A',
-      breakdown: 'N/A',
-      description: jobDescription,
-      total: 0,
-      status: 'Scheduled',
-      fileUrl: '#',
-      summary: 'New job scheduled.',
-      technicianId,
-      customerId,
-    };
-
     try {
-      // Save customer profile
-      const customerRef = doc(firestore, 'customers', customerId);
-      setDocumentNonBlocking(customerRef, customerData, { merge: true });
+        const response = await fetch('/api/customers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name,
+                address,
+                phone,
+                jobDescription,
+                technicianId,
+            }),
+        });
 
-      // Save service record to technician's subcollection
-      const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-      setDocumentNonBlocking(techRecordRef, recordData, {});
+        const result = await response.json();
 
-      // Save service record to customer's subcollection
-      const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-      setDocumentNonBlocking(customerRecordRef, recordData, {});
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to create customer and job.');
+        }
       
       toast({
         title: 'Customer and Job Added',
@@ -151,7 +122,8 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
 
     } catch (error) {
       console.error("Error creating customer and job:", error);
-      toast({ title: 'Error', description: "Failed to save new customer and job.", variant: 'destructive' });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: 'Error', description: `Failed to save new customer and job. ${errorMessage}`, variant: 'destructive' });
     } finally {
         setIsSaving(false);
     }
@@ -223,7 +195,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
             </div>
              <div className="grid gap-2">
               <Label htmlFor="technician">Assign Technician</Label>
-               <Select name="technicianId" onValueChange={setTechnicianId} value={technicianId}>
+               <Select name="technicianId" onValueChange={setTechnicianId} value={technicianId} required>
                   <SelectTrigger className="h-10">
                       <SelectValue placeholder="Select a technician" />
                   </SelectTrigger>
