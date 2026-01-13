@@ -20,15 +20,16 @@ import { FirebaseClientProvider } from '@/firebase';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const userAvatar = getPlaceholderImage('user-avatar');
+  const logoUrl = "https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png";
 
   return (
     <FirebaseClientProvider>
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader>
-            <div className="flex items-center justify-center p-2">
+            <div className="flex items-center justify-center p-4">
               <Image
-                src="https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png"
+                src={logoUrl}
                 alt="K & D Refrigeration & Heating"
                 width={180}
                 height={50}
@@ -96,8 +97,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Sidebar>
         <SidebarInset className="flex flex-col">
           <MainHeader />
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-            {children}
+          <main className="relative flex-1 overflow-y-auto p-4 lg:p-6">
+            <div
+              className="absolute inset-0 z-0 bg-contain bg-center bg-no-repeat opacity-5"
+              style={{
+                backgroundImage: `url(${logoUrl})`,
+              }}
+            />
+            <div className="relative z-10">
+              {children}
+            </div>
           </main>
         </SidebarInset>
       </SidebarProvider>
