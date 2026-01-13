@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 type RecordDetailsSheetProps = {
   record: ServiceRecord | null;
@@ -80,7 +81,14 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setEditedRecord(prev => prev ? { ...prev, [name]: value } : null);
+    setEditedRecord(prev => {
+        if (!prev) return null;
+        if (name === 'technicianId') {
+            const tech = MOCK_TECHNICIANS.find(t => t.id === value);
+            return { ...prev, technicianId: value, technician: tech?.name || '' };
+        }
+        return { ...prev, [name]: value };
+    });
   };
 
   const handleSave = () => {
@@ -126,7 +134,21 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
             <div className="space-y-3">
                 <h3 className="font-semibold text-base">Record Information</h3>
                 <EditableDetailItem label="Customer" name="customer" value={currentData.customer || ''} onChange={handleInputChange} />
-                <EditableDetailItem label="Technician" name="technician" value={currentData.technician || ''} onChange={handleInputChange} />
+                <div className="grid grid-cols-3 items-center gap-2 text-sm">
+                    <Label className="text-muted-foreground">Technician</Label>
+                    <div className="col-span-2">
+                        <Select name="technicianId" value={currentData.technicianId} onValueChange={(value) => handleSelectChange('technicianId', value)}>
+                            <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Select technician" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {MOCK_TECHNICIANS.map(tech => (
+                                    <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
                 <EditableDetailItem label="Address" name="address" value={currentData.address || ''} onChange={handleInputChange} />
                 <EditableDetailItem label="Phone" name="phone" value={currentData.phone || ''} onChange={handleInputChange} />
             </div>

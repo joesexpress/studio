@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { addCustomerAndJob } from '@/app/actions';
 import { useFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 type AddCustomerDialogProps = {
   isOpen: boolean;
@@ -28,6 +30,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
   const { user } = useFirebase();
   const [isSaving, setIsSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
+  const [technicianId, setTechnicianId] = React.useState<string>('');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -39,10 +42,18 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
       });
       return;
     }
+     if (!technicianId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a technician.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsSaving(true);
     const formData = new FormData(event.currentTarget);
-    formData.append('technicianId', user.uid);
+    formData.append('technicianId', technicianId);
 
     const result = await addCustomerAndJob(formData);
 
@@ -53,6 +64,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
       });
       onOpenChange(false);
       formRef.current?.reset();
+      setTechnicianId('');
     } else {
       toast({
         title: 'Error',
@@ -62,9 +74,17 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
     }
     setIsSaving(false);
   };
+  
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      formRef.current?.reset();
+      setTechnicianId('');
+    }
+    onOpenChange(open);
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <form onSubmit={handleSubmit} ref={formRef}>
           <DialogHeader>
@@ -94,6 +114,19 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
                 placeholder="e.g., Annual HVAC maintenance check..."
                 required
               />
+            </div>
+             <div className="grid gap-2">
+              <Label htmlFor="technician">Assign Technician</Label>
+               <Select name="technicianId" onValueChange={setTechnicianId} value={technicianId}>
+                  <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select a technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {MOCK_TECHNICIANS.map(tech => (
+                          <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

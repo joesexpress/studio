@@ -1,11 +1,17 @@
 
-import type { ServiceRecord, Customer, TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, Todo, CalendarEvent, Expense, PriceBookEntry } from './types';
+import type { ServiceRecord, Customer, Technician, Todo, CalendarEvent, Expense, PriceBookEntry } from './types';
+
+export const MOCK_TECHNICIANS: Technician[] = [
+  { id: 'tech-jake', name: 'Jake', email: 'jake@kdhvac.com', phone: '555-1111' },
+  { id: 'tech-phil', name: 'Phil', email: 'phil@kdhvac.com', phone: '555-2222' },
+  { id: 'tech-derek', name: 'Derek', email: 'derek@kdhvac.com', phone: '555-3333' },
+];
 
 export const MOCK_RECORDS: ServiceRecord[] = [
   {
     id: 'rec-1',
     date: '2023-10-26T10:00:00Z',
-    technician: 'John Doe',
+    technician: 'Jake',
     customer: 'Alice Martin',
     address: '123 Maple St, Anytown, USA',
     phone: '555-1234',
@@ -20,13 +26,13 @@ export const MOCK_RECORDS: ServiceRecord[] = [
     status: 'Paid',
     fileUrl: '#',
     summary: 'Annual maintenance check including coil cleaning and filter replacement.',
-    technicianId: 'tech-john-doe',
+    technicianId: 'tech-jake',
     customerId: 'cust-alice-martin',
   },
   {
     id: 'rec-2',
     date: '2023-10-25T14:30:00Z',
-    technician: 'Jane Smith',
+    technician: 'Phil',
     customer: 'Bob Johnson',
     address: '456 Oak Ave, Anytown, USA',
     phone: '555-5678',
@@ -41,13 +47,13 @@ export const MOCK_RECORDS: ServiceRecord[] = [
     status: 'Owed',
     fileUrl: '#',
     summary: 'Replaced a failed compressor and recharged the AC system.',
-    technicianId: 'tech-jane-smith',
+    technicianId: 'tech-phil',
     customerId: 'cust-bob-johnson',
   },
     {
     id: 'rec-3',
     date: '2023-09-15T09:00:00Z',
-    technician: 'John Doe',
+    technician: 'Derek',
     customer: 'Charlie Brown',
     address: '789 Pine Ln, Anytown, USA',
     phone: '555-9876',
@@ -62,7 +68,7 @@ export const MOCK_RECORDS: ServiceRecord[] = [
     status: 'Estimate',
     fileUrl: '#',
     summary: 'Provided an estimate for a complete new HVAC system installation.',
-    technicianId: 'tech-john-doe',
+    technicianId: 'tech-derek',
     customerId: 'cust-charlie-brown',
   },
 ];
@@ -98,22 +104,22 @@ export const MOCK_CUSTOMERS: Customer[] = [
 ];
 
 export const MOCK_TODOS: Todo[] = [
-    { id: 'todo-1', task: 'Pick up filters from supplier', isCompleted: false, createdAt: new Date() as any, technicianId: 'tech-john-doe'},
-    { id: 'todo-2', task: 'Call back Mrs. Higgins about estimate', isCompleted: false, createdAt: new Date() as any, technicianId: 'tech-john-doe'},
-    { id: 'todo-3', task: 'Organize van stock', isCompleted: true, createdAt: new Date() as any, technicianId: 'tech-john-doe'},
+    { id: 'todo-1', task: 'Pick up filters from supplier', isCompleted: false, createdAt: new Date() as any, technicianId: 'tech-jake'},
+    { id: 'todo-2', task: 'Call back Mrs. Higgins about estimate', isCompleted: false, createdAt: new Date() as any, technicianId: 'tech-jake'},
+    { id: 'todo-3', task: 'Organize van stock', isCompleted: true, createdAt: new Date() as any, technicianId: 'tech-jake'},
 ];
 
 export const MOCK_EVENTS: CalendarEvent[] = [
-    { id: 'event-1', title: 'Service for Alice Martin', start: new Date(2023, 9, 26, 10, 0), end: new Date(2023, 9, 26, 12, 0), technicianId: 'tech-john-doe' },
-    { id: 'event-2', title: 'Install for Bob Johnson', start: new Date(2023, 9, 25, 14, 30), end: new Date(2023, 9, 25, 18, 0), technicianId: 'tech-john-doe' },
+    { id: 'event-1', title: 'Service for Alice Martin', start: new Date(2023, 9, 26, 10, 0), end: new Date(2023, 9, 26, 12, 0), technicianId: 'tech-jake' },
+    { id: 'event-2', title: 'Install for Bob Johnson', start: new Date(2023, 9, 25, 14, 30), end: new Date(2023, 9, 25, 18, 0), technicianId: 'tech-phil' },
 ];
 
 export const MOCK_EXPENSES: Expense[] = [
-    { id: 'exp-1', date: '2023-10-25T12:00:00Z', technicianId: 'tech-john-doe', amount: 350.00, description: 'Compressor for job #rec-2', vendor: 'AC Parts Direct', receiptUrl: '#'},
-    { id: 'exp-2', date: '2023-10-20T08:30:00Z', technicianId: 'tech-john-doe', amount: 55.75, description: 'Assorted filters and cleaning supplies', vendor: 'Home Depot', receiptUrl: '#'},
+    { id: 'exp-1', date: '2023-10-25T12:00:00Z', technicianId: 'tech-jake', amount: 350.00, description: 'Compressor for job #rec-2', vendor: 'AC Parts Direct', receiptUrl: '#'},
+    { id: 'exp-2', date: '2023-10-20T08:30:00Z', technicianId: 'tech-jake', amount: 55.75, description: 'Assorted filters and cleaning supplies', vendor: 'Home Depot', receiptUrl: '#'},
 ];
 
 export const MOCK_PRICE_BOOK: PriceBookEntry[] = [
-    { id: 'pb-1', fileName: '2023_Fall_Pricing_Sheet.pdf', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-john-doe' },
-    { id: 'pb-2', fileName: 'Carrier_Install_Estimates.xlsx', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-john-doe' },
+    { id: 'pb-1', fileName: '2023_Fall_Pricing_Sheet.pdf', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-jake' },
+    { id: 'pb-2', fileName: 'Carrier_Install_Estimates.xlsx', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-jake' },
 ];

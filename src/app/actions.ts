@@ -6,8 +6,9 @@ import { summarizeServiceRecord } from "@/ai/flows/summarize-service-records";
 import { z } from "zod";
 import { doc, serverTimestamp, collection } from 'firebase/firestore';
 import { initializeFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import type { ServiceRecord, Customer } from '@/lib/types';
+import type { ServiceRecord, Customer, Technician } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 const fileSchema = z.object({
   fileDataUri: z.string().refine(val => val.startsWith('data:'), {
@@ -30,6 +31,7 @@ export async function processServiceRecord(formData: FormData) {
   }
   
   const { fileDataUri, technicianId } = validation.data;
+  const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
 
   try {
     const extractedData = await extractDataFromServiceRecord({ documentDataUri: fileDataUri });
@@ -42,7 +44,7 @@ export async function processServiceRecord(formData: FormData) {
     const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
       id: recordId,
       customer: extractedData.customer,
-      technician: extractedData.technician,
+      technician: technicianName,
       date: serverTimestamp(),
       summary: summaryData.summary,
       address: extractedData.address,
@@ -119,6 +121,7 @@ export async function addCustomerAndJob(formData: FormData) {
 
   const { name, address, phone, jobDescription, technicianId } = validation.data;
   const { firestore } = initializeFirebase();
+  const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
 
   const customerId = `cust-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
   const recordId = `rec-${Date.now()}`;
@@ -133,7 +136,7 @@ export async function addCustomerAndJob(formData: FormData) {
   const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
     id: recordId,
     date: serverTimestamp(),
-    technician: 'N/A', // Or get current tech name
+    technician: technicianName,
     customer: name,
     address,
     phone,
