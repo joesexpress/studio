@@ -1,35 +1,13 @@
-/**
- * Core Philosophy: This ruleset enforces a model where any authenticated user can access the data. This is suitable for single-user or development scenarios.
- *
- * Data Structure: The database has a primary top-level collection: `/technicians`. Each technician document contains subcollections for `serviceRecords`, `todos`, `calendarEvents`, etc.
- *
- * Key Security Decisions:
- * - Open Access for Authenticated Users: To simplify development and for single-technician use cases, any signed-in user is granted read and write access to the data. This removes the need for strict ownership checks for each operation.
- * - Data Integrity: While access is open for authenticated users, some basic data integrity is maintained, for example, by checking for the presence of a `technicianId` on creation.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is signed in.
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Controls access to technician profile documents and all their subcollections.
-     * @allow Any authenticated user can manage all data under any technician path.
-     */
-    match /technicians/{technicianId}/{path=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    /**
-     * @description Controls access to customer profile documents and all their subcollections.
-     * @allow Any authenticated user can manage all data under any customer path.
-     */
-    match /customers/{customerId}/{path=**} {
-      allow read, write: if isSignedIn();
+    // Default-deny all access unless explicitly allowed
+    
+    // Allow any authenticated user to read and write to any document in any collection.
+    // This is a broad rule suitable for development or single-user scenarios.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
