@@ -1,27 +1,51 @@
 
 'use client';
+import { useState, useEffect } from 'react';
 import RecordsPageClient from '@/components/records/RecordsPageClient';
-import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collectionGroup, query, orderBy } from 'firebase/firestore';
+import { useFirebase, useUser } from '@/firebase';
+import { collection, getDocs, query } from 'firebase/firestore';
+import type { ServiceRecord, Customer } from '@/lib/types';
 
 export default function RecordsPage() {
-  const { firestore, user, isAuthReady } = useFirebase();
+  const { firestore, isAuthReady } = useUser();
+  const [initialRecords, setInitialRecords] = useState<ServiceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const serviceRecordsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // Query to get all service records across all technicians
-    return query(
-        collectionGroup(firestore, 'serviceRecords'),
-        orderBy('date', 'desc')
-    );
-  }, [firestore, user]);
+  useEffect(() => {
+    const fetchAllRecords = async () => {
+      if (!firestore) return;
+      setIsLoading(true);
+      try {
+        // 1. Fetch all customers
+        const customersQuery = query(collection(firestore, 'customers'));
+        const customersSnapshot = await getDocs(customersQuery);
+        const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
 
-  const { data: initialRecords, isLoading: areRecordsLoading } = useCollection(serviceRecordsQuery, { skip: !isAuthReady });
+        // 2. Fetch all service records from each customer's subcollection
+        const allRecords: ServiceRecord[] = [];
+        for (const customer of customers) {
+            const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
+            const recordsSnapshot = await getDocs(recordsRef);
+            recordsSnapshot.forEach(doc => {
+                allRecords.push({ id: doc.id, ...doc.data() } as ServiceRecord);
+            });
+        }
+        setInitialRecords(allRecords);
 
-  const isLoading = !isAuthReady || areRecordsLoading;
+      } catch (error) {
+        console.error("Failed to fetch records:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isAuthReady) {
+      fetchAllRecords();
+    }
+  }, [firestore, isAuthReady]);
+
 
   if (isLoading) {
-    // You can return a loading spinner here
     return <div>Loading records...</div>;
   }
 
