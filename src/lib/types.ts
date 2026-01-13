@@ -104,3 +104,21 @@ export type OrderItem = {
     name: string;
     quantity: number;
 };
+
+export type QuoteStatus = 'Draft' | 'Sent' | 'Accepted' | 'Declined';
+
+export type Quote = {
+    id: string;
+    customerId: string;
+    customerName: string;
+    customerAddress: string;
+    customerPhone: string;
+    quotePrice: number;
+    validUntil: Timestamp;
+    scopeOfWork: string;
+    laborRequired: string;
+    materialsNeeded: string;
+    status: QuoteStatus;
+    createdAt: Timestamp;
+    technicianId: string;
+};

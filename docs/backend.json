@@ -241,6 +241,28 @@
         "technicianId": { "type": "string", "description": "The ID of the technician who uploaded the file." }
       },
       "required": ["id", "fileName", "fileUrl", "uploadedAt", "technicianId"]
+    },
+    "Quote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quote",
+      "type": "object",
+      "description": "Represents a job quote provided to a customer.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the quote." },
+        "customerId": { "type": "string", "description": "ID of the associated customer." },
+        "customerName": { "type": "string", "description": "Name of the customer." },
+        "customerAddress": { "type": "string", "description": "Address of the customer." },
+        "customerPhone": { "type": "string", "description": "Phone number of the customer." },
+        "quotePrice": { "type": "number", "description": "The total quoted price for the job." },
+        "validUntil": { "type": "string", "format": "date-time", "description": "The date the quote is valid until." },
+        "scopeOfWork": { "type": "string", "description": "Detailed description of the work to be performed." },
+        "laborRequired": { "type": "string", "description": "Description of the labor required." },
+        "materialsNeeded": { "type": "string", "description": "List of materials that will be needed." },
+        "status": { "type": "string", "enum": ["Draft", "Sent", "Accepted", "Declined"], "description": "The current status of the quote." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the quote was created." },
+        "technicianId": { "type": "string", "description": "The ID of the technician who created the quote." }
+      },
+      "required": ["id", "customerId", "customerName", "quotePrice", "validUntil", "scopeOfWork", "status", "createdAt", "technicianId"]
     }
   },
   "auth": {
@@ -366,6 +388,17 @@
                 { "name": "technicianId", "description": "The unique identifier for the technician." },
                 { "name": "entryId", "description": "The unique identifier for the price book entry." }
             ]
+        }
+      },
+      {
+        "path": "/quotes/{quoteId}",
+        "definition": {
+          "entityName": "Quote",
+          "schema": { "$ref": "#/backend/entities/Quote" },
+          "description": "Stores all job quotes. Accessible by technicians.",
+          "params": [
+            { "name": "quoteId", "description": "The unique identifier for the quote." }
+          ]
         }
       }
     ],

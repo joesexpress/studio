@@ -28,6 +28,7 @@ import {
   Link2,
   Clock,
   ShoppingCart,
+  FileQuote,
 } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { FirebaseClientProvider } from '@/firebase';
@@ -75,6 +76,14 @@ export default function RootLayout({
                   <Link href="/records">
                     <AppWindow />
                     <span>Service Records</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Quotes">
+                  <Link href="/quotes">
+                    <FileQuote />
+                    <span>Quotes</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
