@@ -8,6 +8,7 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  isQuery,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -63,7 +64,9 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery || options?.skip) {
+    // Add a guard to ensure it's a valid query/collection object before proceeding.
+    // This prevents errors when the query is being constructed and is temporarily null/undefined.
+    if (!memoizedTargetRefOrQuery || options?.skip || typeof (memoizedTargetRefOrQuery as any).onSnapshot !== 'function') {
       setData(null);
       setIsLoading(false);
       setError(null);
