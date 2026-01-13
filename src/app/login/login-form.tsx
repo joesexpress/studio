@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { FirebaseClientProvider, useFirebase, useUser } from '@/firebase';
-import { initiateAnonymousSignIn, initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { FirebaseClientProvider, useFirebase } from '@/firebase';
+import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -21,15 +22,20 @@ function LoginFormContent() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const { auth } = useFirebase();
-  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
-    // If user is logged in, redirect them.
-    if (user) {
-      router.push('/records');
-    }
-  }, [user, router]);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsUserLoading(false);
+      if (user) {
+        router.push('/records');
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, router]);
   
   const handleSignIn = async () => {
     setIsSigningIn(true);
@@ -80,6 +86,14 @@ function LoginFormContent() {
 
   const isLoading = isSigningIn || isUserLoading;
 
+  if (isUserLoading || user) {
+    return (
+        <div className="flex items-center justify-center h-48">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -110,7 +124,7 @@ function LoginFormContent() {
                 />
             </div>
           <Button onClick={handleSignIn} className="w-full" disabled={isLoading}>
-            {isLoading ? (
+            {isSigningIn ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Please wait...
@@ -120,7 +134,14 @@ function LoginFormContent() {
             )}
           </Button>
           <Button variant="secondary" onClick={handleGuestSignIn} className="w-full" disabled={isLoading}>
-            Enter as Guest
+            {isSigningIn ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Please wait...
+              </>
+            ) : (
+              'Enter as Guest'
+            )}
           </Button>
         </div>
       </CardContent>

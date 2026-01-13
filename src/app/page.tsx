@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 export default function Home() {
-  // Always redirect to the app, middleware will handle auth check.
-  redirect('/records');
+  // The middleware will handle redirection to /login or /records.
+  // This page can remain as a simple entry point.
+  redirect('/login');
 }

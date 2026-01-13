@@ -1,27 +1,39 @@
+
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // This function can be marked `async` if using `await` inside
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const isLoggedIn = request.cookies.get('firebase-auth-key'); // A simple check for a cookie
     
-    // For this simple case, we redirect to login if they are not at the login page.
-    // A real app would check for an auth token.
-    // We are allowing access to the root page to redirect to login or app.
+    // Allow API routes and static files to pass through
     if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.startsWith('/static')) {
         return NextResponse.next();
     }
     
-    // This app doesn't have a real authentication system.
-    // We will redirect to /records as the main page.
-    // The login page is effectively removed in favor of anonymous auth.
+    // If user is on the login page
     if (pathname === '/login') {
+        // If they are already logged in, redirect them to the records page
+        if (isLoggedIn) {
+            return NextResponse.redirect(new URL('/records', request.url));
+        }
+        // Otherwise, let them see the login page
         return NextResponse.next();
     }
 
-    if (pathname !== '/' && !pathname.startsWith('/records') && !pathname.startsWith('/dashboard') && !pathname.startsWith('/customers') && !pathname.startsWith('/invoices')) {
-       // If trying to access something else, maybe go to login?
-       // For now, let's allow it but a real app would lock this down.
+    // For any other page, if the user is not logged in, redirect to login
+    if (!isLoggedIn && pathname !== '/') {
+         return NextResponse.redirect(new URL('/login', request.url));
+    }
+    
+    // If user is at root, and logged in, go to records. If not, go to login.
+    if (pathname === '/') {
+        if (isLoggedIn) {
+            return NextResponse.redirect(new URL('/records', request.url));
+        } else {
+            return NextResponse.redirect(new URL('/login', request.url));
+        }
     }
 
   return NextResponse.next();
