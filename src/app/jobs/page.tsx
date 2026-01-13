@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import type { Todo, CalendarEvent } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TodoList from '@/components/jobs/TodoList';
@@ -11,8 +11,10 @@ import { collection } from 'firebase/firestore';
 
 export default function JobsPage() {
   const { firestore, user, isUserLoading } = useFirebase();
+  const [isLoading, setIsLoading] = useState(true);
 
   // Using a mock user ID as login is removed.
+  // In a real app, you'd get this from the logged-in user.
   const mockUserId = 'tech-jake';
 
   const todosQuery = useMemoFirebase(() => {
@@ -37,7 +39,11 @@ export default function JobsPage() {
     }));
   }, [calendarEvents]);
   
-  const isLoading = isUserLoading || isTodosLoading || isEventsLoading;
+  useEffect(() => {
+    const combinedLoading = isUserLoading || isTodosLoading || isEventsLoading;
+    setIsLoading(combinedLoading);
+  }, [isUserLoading, isTodosLoading, isEventsLoading]);
+
 
   if (isLoading) {
     return <div>Loading tasks and calendar...</div>;

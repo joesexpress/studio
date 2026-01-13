@@ -73,6 +73,10 @@ export default function QuotesPage() {
   
   const isLoading = isUserLoading || isQuotesLoading;
 
+  if (isLoading) {
+    return <div>Loading quotes...</div>;
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -108,13 +112,7 @@ export default function QuotesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Loading quotes...
-                  </TableCell>
-                </TableRow>
-              ) : quotes && quotes.length > 0 ? (
+              {quotes && quotes.length > 0 ? (
                 quotes.map((quote) => (
                   <TableRow key={quote.id}>
                     <TableCell>{getQuoteDate(quote, 'createdAt')}</TableCell>
