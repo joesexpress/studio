@@ -106,7 +106,7 @@ export function useCollection<T = any>(
 
         setError(contextualError)
         setData(null)
-        setIsLoading(false)
+        setIsLoading(false) // This was missing
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
