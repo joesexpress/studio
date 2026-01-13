@@ -72,6 +72,10 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
       const statusMatch = statusFilter.length === 0 || statusFilter.includes(record.status);
 
       return searchMatch && statusMatch;
+    }).sort((a,b) => {
+        const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : (a.date as any).toDate()).getTime() : 0;
+        const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
+        return dateB - dateA;
     });
   }, [records, searchTerm, statusFilter]);
   
