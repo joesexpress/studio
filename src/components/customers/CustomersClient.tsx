@@ -71,9 +71,18 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
       status: []
   });
   
-  // When the underlying data changes (e.g., after deletion), we need to clear selected rows
+  // When the underlying data changes via real-time updates, clear selected rows
+  // if any of the selected rows are no longer in the records list.
   React.useEffect(() => {
-    setSelectedRows([]);
+    setSelectedRows(prevSelected => {
+      const recordIds = new Set(allRecords.map(r => r.id));
+      const newSelected = prevSelected.filter(id => recordIds.has(id));
+      // Only update state if there's a change to prevent re-renders
+      if (newSelected.length !== prevSelected.length) {
+        return newSelected;
+      }
+      return prevSelected;
+    });
   }, [allRecords]);
 
 
@@ -167,7 +176,8 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
         description: 'The selected records have been removed.'
     });
 
-    setSelectedRows([]);
+    // The UI will now update reactively, so we don't need to clear selectedRows manually here.
+    // It will be handled by the useEffect watching allRecords.
   }
 
   const isAllSelected = filteredRecords.length > 0 && selectedRows.length === filteredRecords.length;

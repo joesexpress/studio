@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Customer, ServiceRecord } from '@/lib/types';
 import CustomersClient from '@/components/customers/CustomersClient';
-import { useFirebase, useUser } from '@/firebase';
+import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, getDocs, query, collectionGroup } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -12,39 +12,20 @@ import { Loader2 } from 'lucide-react';
 
 export default function CustomersPage() {
   const { firestore, isAuthReady } = useFirebase();
-  const [allRecords, setAllRecords] = useState<ServiceRecord[]>([]);
-  const [allCustomers, setAllCustomers] = useState<Omit<Customer, 'records'>[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
-  const fetchData = async () => {
-    if (!firestore || !isAuthReady) return;
+  const customersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'customers');
+  }, [firestore]);
+  const { data: allCustomers, isLoading: isCustomersLoading } = useCollection<Omit<Customer, 'records'>>(customersQuery);
 
-    setIsLoading(true);
-    try {
-      // Fetch all customers
-      const custQuery = query(collection(firestore, 'customers'));
-      const custSnapshot = await getDocs(custQuery);
-      const customersList = custSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Omit<Customer, 'records'>));
-      setAllCustomers(customersList);
-      
-      // Fetch all service records
-      const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
-      const recordsSnapshot = await getDocs(recordsQuery);
-      const recordsList = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-      setAllRecords(recordsList);
-
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [firestore, isAuthReady]);
+  const recordsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collectionGroup(firestore, 'serviceRecords');
+  }, [firestore]);
+  const { data: allRecords, isLoading: isRecordsLoading } = useCollection<ServiceRecord>(recordsQuery);
 
   const handleDeleteAllData = async () => {
     setIsDeleting(true);
@@ -65,9 +46,6 @@ export default function CustomersPage() {
             description: 'Your customer and job records have been cleared.',
         });
         
-        // Refetch data to show empty state
-        await fetchData();
-
     } catch (error) {
         console.error("Error deleting all data:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -77,6 +55,7 @@ export default function CustomersPage() {
     }
   }
 
+  const isLoading = !isAuthReady || isCustomersLoading || isRecordsLoading;
 
   if (isLoading) {
     return <div>Loading jobs...</div>
@@ -109,7 +88,7 @@ export default function CustomersPage() {
             </AlertDialogContent>
         </AlertDialog>
     </div>
-    <CustomersClient allRecords={allRecords} allCustomers={allCustomers} />
+    <CustomersClient allRecords={allRecords || []} allCustomers={allCustomers || []} />
     </>
     );
 }
