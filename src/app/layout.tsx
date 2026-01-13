@@ -30,7 +30,6 @@ import {
   Clock,
   ShoppingCart,
   Quote,
-  Map,
 } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { FirebaseClientProvider } from '@/firebase';
@@ -94,14 +93,6 @@ export default function RootLayout({
                   <Link href="/dashboard">
                     <BarChart3 />
                     <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Map">
-                  <Link href="#" aria-disabled="true">
-                    <Map />
-                    <span>Map</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
