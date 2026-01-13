@@ -13,29 +13,67 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { format } from 'date-fns';
-import { PlusCircle, Download } from 'lucide-react';
+import { format, isWithinInterval } from 'date-fns';
+import { PlusCircle, Download, CalendarIcon } from 'lucide-react';
 import UploadExpenseDialog from '@/components/expenses/UploadExpenseDialog';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collectionGroup, getDocs, query } from 'firebase/firestore';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { DateRange } from 'react-day-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const { firestore } = useFirebase();
+  const [allExpenses, setAllExpenses] = React.useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  const [filters, setFilters] = React.useState<{
+    technicianId: string;
+    dateRange: DateRange | undefined;
+  }>({
+    technicianId: 'all',
+    dateRange: undefined,
+  });
 
-  // Using a mock user ID as login is removed.
-  const mockUserId = 'tech-jake';
-
-  const expensesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-        collection(firestore, 'technicians', mockUserId, 'expenses'),
-        orderBy('date', 'desc')
-    );
+  React.useEffect(() => {
+    const fetchAllExpenses = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        try {
+            const expensesQuery = query(collectionGroup(firestore, 'expenses'));
+            const expensesSnapshot = await getDocs(expensesQuery);
+            const expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+            setAllExpenses(expenses);
+        } catch (error) {
+            console.error("Failed to fetch expenses:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchAllExpenses();
   }, [firestore]);
 
-  const { data: expenses, isLoading } = useCollection<Expense>(expensesQuery);
+
+  const filteredExpenses = React.useMemo(() => {
+    return allExpenses.filter(expense => {
+      const techMatch = filters.technicianId === 'all' || expense.technicianId === filters.technicianId;
+      
+      const expenseDate = expense.date ? (typeof expense.date === 'string' ? new Date(expense.date) : (expense.date as any).toDate()) : new Date();
+      const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(expenseDate, { start: filters.dateRange.from, end: filters.dateRange.to });
+
+      return techMatch && dateMatch;
+    }).sort((a,b) => {
+        const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : (a.date as any).toDate()).getTime() : 0;
+        const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
+        return dateB - dateA;
+    });
+  }, [allExpenses, filters]);
+
 
   const getEntryDate = (entry: Expense) => {
     if (!entry.date) return 'N/A';
@@ -44,9 +82,16 @@ export default function ExpensesPage() {
   };
   
   const totalExpenses = React.useMemo(() => {
-    if (!expenses) return 0;
-    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  }, [expenses]);
+    return filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  }, [filteredExpenses]);
+
+  const handleTechnicianChange = (techId: string) => {
+    setFilters(prev => ({...prev, technicianId: techId}));
+  }
+
+  const handleDateChange = (dateRange: DateRange | undefined) => {
+    setFilters(prev => ({...prev, dateRange}));
+  }
 
   return (
     <>
@@ -59,7 +104,7 @@ export default function ExpensesPage() {
         </div>
         <div className='flex items-center gap-4'>
             <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Expenses</p>
+                <p className="text-sm text-muted-foreground">Total Displayed</p>
                 <p className="text-2xl font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalExpenses)}</p>
             </div>
             <Button size="sm" onClick={() => setIsUploadOpen(true)}>
@@ -68,6 +113,59 @@ export default function ExpensesPage() {
             </Button>
         </div>
       </div>
+      
+      <Card className="p-4 mb-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <Select value={filters.technicianId} onValueChange={handleTechnicianChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All Technicians" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Technicians</SelectItem>
+            {MOCK_TECHNICIANS.filter(t => !['tbd', 'fcfs'].includes(t.id)).map(tech => (
+              <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant={'outline'}
+              className={cn(
+                "w-[300px] justify-start text-left font-normal",
+                !filters.dateRange && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {filters.dateRange?.from ? (
+                filters.dateRange.to ? (
+                  <>
+                    {format(filters.dateRange.from, "LLL dd, y")} -{' '}
+                    {format(filters.dateRange.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(filters.dateRange.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={filters.dateRange?.from}
+              selected={filters.dateRange}
+              onSelect={handleDateChange}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    </Card>
 
       <Card>
         <CardContent className="p-0">
@@ -77,6 +175,7 @@ export default function ExpensesPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Vendor</TableHead>
                 <TableHead>Description</TableHead>
+                <TableHead>Technician</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Receipt</TableHead>
               </TableRow>
@@ -84,32 +183,36 @@ export default function ExpensesPage() {
             <TableBody>
               {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                         Loading expenses...
                     </TableCell>
                   </TableRow>
-              ) : expenses && expenses.length > 0 ? (
-                expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell>{getEntryDate(expense)}</TableCell>
-                    <TableCell className="font-medium">{expense.vendor}</TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                     <TableCell className="text-right font-medium">
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expense.amount)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild variant="ghost" size="sm">
-                        <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+              ) : filteredExpenses.length > 0 ? (
+                filteredExpenses.map((expense) => {
+                    const techName = MOCK_TECHNICIANS.find(t => t.id === expense.technicianId)?.name || 'N/A';
+                    return (
+                        <TableRow key={expense.id}>
+                            <TableCell>{getEntryDate(expense)}</TableCell>
+                            <TableCell className="font-medium">{expense.vendor}</TableCell>
+                            <TableCell>{expense.description}</TableCell>
+                            <TableCell>{techName}</TableCell>
+                            <TableCell className="text-right font-medium">
+                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expense.amount)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <Button asChild variant="ghost" size="sm">
+                                <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                <Download className="h-4 w-4" />
+                                </a>
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                    )
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    No expenses found.
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No expenses found for the selected filters.
                   </TableCell>
                 </TableRow>
               )}
