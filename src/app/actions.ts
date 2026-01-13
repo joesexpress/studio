@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -188,11 +189,12 @@ export async function processCsvImport(formData: FormData) {
     const parsedData = Papa.parse(fileContent, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: header => header.trim(),
     });
 
     if (parsedData.errors.length > 0) {
       console.error('CSV Parsing errors:', parsedData.errors);
-      return { success: false, error: `CSV parsing error: ${parsedData.errors[0].message}` };
+      return { success: false, error: `CSV parsing error on row ${parsedData.errors[0].row}: ${parsedData.errors[0].message}` };
     }
 
     const records: any[] = parsedData.data;
@@ -201,24 +203,39 @@ export async function processCsvImport(formData: FormData) {
 
     for (const record of records) {
       const customerName = record.Customer || 'N/A';
-      if (customerName === 'N/A') continue;
+      if (customerName === 'N/A' || !customerName.trim()) continue;
 
       const techName = record.Tech || 'N/A';
       const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
       const technicianId = technician?.id || 'tbd';
 
       const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
-      const recordId = `rec-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const recordId = `rec-${Date.now()}-${processedCount}`;
 
       const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
-      const recordDate = record.Date ? new Date(record.Date) : new Date();
+      
+      let recordDate;
+      if (record.Date) {
+        const parsedDate = new Date(record.Date);
+        if (!isNaN(parsedDate.getTime())) {
+          recordDate = parsedDate;
+        } else {
+          console.warn(`Invalid date format for record, using current date: ${record.Date}`);
+          recordDate = new Date();
+        }
+      } else {
+        recordDate = new Date();
+      }
+
+      const description = record['Full Description of Work'] || 'N/A';
+      const summary = description.length > 100 ? description.substring(0, 100) + '...' : description;
 
       const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
         id: recordId,
         customer: customerName,
         technician: techName,
         date: recordDate,
-        summary: record['Full Description of Work']?.substring(0, 100) + '...' || 'Imported from CSV.',
+        summary: summary,
         address: record.Address || 'N/A',
         phone: record.Phone || 'N/A',
         model: record.Model || 'N/A',
@@ -227,7 +244,7 @@ export async function processCsvImport(formData: FormData) {
         freonType: record.Freon || 'N/A',
         laborHours: record['Total Hours'] || 'N/A',
         breakdown: record.Breakdown || 'N/A',
-        description: record['Full Description of Work'] || 'N/A',
+        description: description,
         total: total,
         fileUrl: record['File Link'] || '#',
         technicianId: technicianId,
@@ -255,13 +272,15 @@ export async function processCsvImport(formData: FormData) {
       processedCount++;
     }
 
-    revalidatePath("/records");
-    revalidatePath("/customers");
-    revalidatePath("/dashboard");
+    revalidatePath("/records", 'layout');
+    revalidatePath("/customers", 'layout');
+    revalidatePath("/dashboard", 'layout');
 
     return { success: true, count: processedCount };
   } catch (error) {
     console.error("Error processing CSV file:", error);
-    return { success: false, error: "An unexpected error occurred while processing the CSV." };
+    return { success: false, error: "An unexpected error occurred while processing the CSV file." };
   }
 }
+
+    
