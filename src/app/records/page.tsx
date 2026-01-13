@@ -1,51 +1,38 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import RecordsPageClient from '@/components/records/RecordsPageClient';
-import { useFirebase, useUser } from '@/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
-import type { ServiceRecord, Customer } from '@/lib/types';
+import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collectionGroup, query, orderBy } from 'firebase/firestore';
+import type { ServiceRecord } from '@/lib/types';
 
 export default function RecordsPage() {
-  const { firestore, isAuthReady } = useUser();
-  const [initialRecords, setInitialRecords] = useState<ServiceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { firestore, isAuthReady } = useFirebase();
+
+  // This query will find all documents in any collection named 'serviceRecords'
+  // and order them by date. This is the most efficient way to get all jobs.
+  const allRecordsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collectionGroup(firestore, 'serviceRecords'),
+      orderBy('date', 'desc')
+    );
+  }, [firestore]);
+
+  // The useCollection hook handles loading, error, and data states for us.
+  const { data: initialRecords, isLoading, error } = useCollection<ServiceRecord>(
+    allRecordsQuery,
+    { skip: !isAuthReady }
+  );
 
   useEffect(() => {
-    const fetchAllRecords = async () => {
-      if (!firestore) return;
-      setIsLoading(true);
-      try {
-        // 1. Fetch all customers
-        const customersQuery = query(collection(firestore, 'customers'));
-        const customersSnapshot = await getDocs(customersQuery);
-        const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-
-        // 2. Fetch all service records from each customer's subcollection
-        const allRecords: ServiceRecord[] = [];
-        for (const customer of customers) {
-            const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
-            const recordsSnapshot = await getDocs(recordsRef);
-            recordsSnapshot.forEach(doc => {
-                allRecords.push({ id: doc.id, ...doc.data() } as ServiceRecord);
-            });
-        }
-        setInitialRecords(allRecords);
-
-      } catch (error) {
-        console.error("Failed to fetch records:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isAuthReady) {
-      fetchAllRecords();
+    if (error) {
+      console.error("Failed to fetch records:", error);
+      // Optionally, show a toast notification for the error
     }
-  }, [firestore, isAuthReady]);
+  }, [error]);
 
-
-  if (isLoading) {
+  // The isLoading state from the hook will determine if we show the loading message.
+  if (isLoading || !isAuthReady) {
     return <div>Loading records...</div>;
   }
 
