@@ -17,14 +17,25 @@ import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { Edit, MapPin, Phone, PlusCircle, Download } from 'lucide-react';
+import { Edit, MapPin, Phone, PlusCircle, Download, Trash2 } from 'lucide-react';
 import EditCustomerDialog from './EditCustomerDialog';
-import { setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { doc, collection, getDocs } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import AddCustomerDialog from './AddCustomerDialog';
 import { downloadCsv } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
@@ -59,9 +70,9 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
     } else if (selectedCustomer) {
       // Update selected customer with fresh data from the list
       const freshCustomer = customers.find(c => c.id === selectedCustomer.id);
-      if (freshCustomer) {
-        setSelectedCustomer(freshCustomer);
-      }
+      setSelectedCustomer(freshCustomer || null);
+    } else {
+      setSelectedCustomer(null);
     }
   }, [customers, selectedCustomer]);
 
@@ -87,6 +98,46 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
         description: 'The customer details have been saved.',
     });
   }
+  
+  const handleDeleteCustomer = async () => {
+    if (!firestore || !selectedCustomer) return;
+
+    const customerId = selectedCustomer.id;
+
+    try {
+        // 1. Delete all service records for the customer
+        const recordsRef = collection(firestore, 'customers', customerId, 'serviceRecords');
+        const recordsSnapshot = await getDocs(recordsRef);
+        
+        for (const recordDoc of recordsSnapshot.docs) {
+            const record = recordDoc.data() as ServiceRecord;
+            // Delete from technician's subcollection
+            const techRecordRef = doc(firestore, 'technicians', record.technicianId, 'serviceRecords', record.id);
+            deleteDocumentNonBlocking(techRecordRef);
+            // Delete from customer's subcollection
+            deleteDocumentNonBlocking(recordDoc.ref);
+        }
+
+        // 2. Delete the customer document itself
+        const customerRef = doc(firestore, 'customers', customerId);
+        deleteDocumentNonBlocking(customerRef);
+
+        toast({
+            title: 'Customer Deleted',
+            description: `${selectedCustomer.name} and all their jobs have been removed.`,
+        });
+
+        setSelectedCustomer(null);
+
+    } catch (error) {
+        console.error("Error deleting customer:", error);
+        toast({
+            title: 'Error Deleting Customer',
+            description: 'There was a problem removing the customer.',
+            variant: 'destructive',
+        });
+    }
+};
 
   const handleRecordUpdate = (updatedRecord: ServiceRecord) => {
      // This is a bit of a trick to force a re-render with fresh data.
@@ -176,9 +227,31 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
                             </a>
                         </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setIsEditCustomerOpen(true)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                    </Button>
+                    <div className="flex items-center gap-2">
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                               <Button variant="destructive" size="sm">
+                                   <Trash2 className="mr-2 h-4 w-4" /> Delete
+                               </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                               <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                     This action cannot be undone. This will permanently delete the customer and all of their associated jobs.
+                                  </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteCustomer}>Continue</AlertDialogAction>
+                               </AlertDialogFooter>
+                            </AlertDialogContent>
+                         </AlertDialog>
+
+                        <Button variant="outline" size="sm" onClick={() => setIsEditCustomerOpen(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -234,7 +307,7 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
           </>
         ) : (
             <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Select a customer to see their details.</p>
+                <p className="text-muted-foreground">Select or create a customer.</p>
             </div>
         )}
       </Card>

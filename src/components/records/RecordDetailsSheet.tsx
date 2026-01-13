@@ -9,17 +9,28 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import type { ServiceRecord, ServiceRecordStatus, PaymentMethod } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Bot, Edit, Save, X } from 'lucide-react';
+import { ExternalLink, Bot, Edit, Save, X, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
@@ -117,6 +128,22 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
         onRecordUpdated(recordToSave as ServiceRecord);
     }
     setIsEditing(false);
+  };
+  
+  const handleDelete = () => {
+    if (!firestore || !record) return;
+
+    const techRecordRef = doc(firestore, 'technicians', record.technicianId, 'serviceRecords', record.id);
+    const customerRecordRef = doc(firestore, 'customers', record.customerId, 'serviceRecords', record.id);
+
+    deleteDocumentNonBlocking(techRecordRef);
+    deleteDocumentNonBlocking(customerRecordRef);
+
+    toast({
+      title: 'Job Deleted',
+      description: 'The service record has been removed.',
+    });
+    onOpenChange(false);
   };
 
   const getRecordDate = () => {
@@ -287,20 +314,43 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                         Work performed for {record.customer} on {getRecordDate()}.
                     </SheetDescription>
                 </div>
-                {!isEditing ? (
-                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                ) : (
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setEditedRecord(record); }}>
-                            <X className="mr-2 h-4 w-4" /> Cancel
-                        </Button>
-                        <Button size="sm" onClick={handleSave}>
-                            <Save className="mr-2 h-4 w-4" /> Save
-                        </Button>
-                    </div>
-                )}
+                <div className="flex items-center gap-2">
+                    {isEditing ? (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => { setIsEditing(false); setEditedRecord(record); }}>
+                                <X className="mr-2 h-4 w-4" /> Cancel
+                            </Button>
+                            <Button size="sm" onClick={handleSave}>
+                                <Save className="mr-2 h-4 w-4" /> Save
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                          <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete this service record.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                            </Button>
+                        </>
+                    )}
+                </div>
             </div>
         </SheetHeader>
         <div className="py-6 overflow-y-auto h-[calc(100vh-12rem)] pr-6">
