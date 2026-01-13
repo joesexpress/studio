@@ -78,22 +78,12 @@ function LoginFormContent() {
     }
   };
 
-  const handleGuestSignIn = async () => {
-    setIsSigningIn(true);
-    try {
-        initiateEmailSignIn(auth, 'guest@kdhvac.com', 'kdhvac');
-        toast({
-            title: 'Signing In as Guest...',
-            description: 'You are being signed in as a guest.',
-        });
-    } catch (error: any) {
-        toast({
-            title: 'Sign In Failed',
-            description: error.message || 'An unexpected error occurred.',
-            variant: 'destructive',
-        });
-        setIsSigningIn(false);
-    }
+  const handleGuestSignIn = () => {
+    setEmail('guest@kdhvac.com');
+    toast({
+        title: 'Guest Login',
+        description: 'Please enter the password "kdhvac" to continue.',
+    });
   }
 
   const handlePasswordReset = async () => {
@@ -170,14 +160,7 @@ function LoginFormContent() {
             )}
           </Button>
           <Button variant="secondary" onClick={handleGuestSignIn} className="w-full" disabled={isLoading}>
-            {isSigningIn ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Please wait...
-              </>
-            ) : (
-              'Enter as Guest'
-            )}
+            Enter as Guest
           </Button>
             <div className="text-center text-sm">
                 <AlertDialog>
