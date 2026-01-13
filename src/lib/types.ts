@@ -89,3 +89,18 @@ export type PriceBookEntry = {
   uploadedAt: Timestamp;
   technicianId: string;
 };
+
+export type TimeLog = {
+    id: string;
+    technicianId: string;
+    timeIn: Timestamp;
+    timeOut: Timestamp | null;
+    notes: string;
+    totalHours?: number;
+};
+
+export type OrderItem = {
+    id: string;
+    name: string;
+    quantity: number;
+};

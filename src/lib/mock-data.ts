@@ -1,5 +1,5 @@
 
-import type { ServiceRecord, Customer, Technician, Todo, CalendarEvent, Expense, PriceBookEntry } from './types';
+import type { ServiceRecord, Customer, Technician, Todo, CalendarEvent, Expense, PriceBookEntry, TimeLog, OrderItem } from './types';
 
 export const MOCK_TECHNICIANS: Technician[] = [
   { id: 'tech-jake', name: 'Jake', email: 'jake@kdhvac.com', phone: '555-1111' },
@@ -122,4 +122,11 @@ export const MOCK_EXPENSES: Expense[] = [
 export const MOCK_PRICE_BOOK: PriceBookEntry[] = [
     { id: 'pb-1', fileName: '2023_Fall_Pricing_Sheet.pdf', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-jake' },
     { id: 'pb-2', fileName: 'Carrier_Install_Estimates.xlsx', fileUrl: '#', uploadedAt: new Date() as any, technicianId: 'tech-jake' },
+];
+
+export const MOCK_TIME_LOGS: TimeLog[] = [];
+
+export const MOCK_ORDER_ITEMS: OrderItem[] = [
+    { id: 'item-1', name: '16x25x1 Filters (12-pack)', quantity: 1 },
+    { id: 'item-2', name: 'R-410A Refrigerant (25lb)', quantity: 1 },
 ];

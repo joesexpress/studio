@@ -26,6 +26,8 @@ import {
   Book,
   ClipboardPen,
   Link2,
+  Clock,
+  ShoppingCart,
 } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { FirebaseClientProvider } from '@/firebase';
@@ -105,6 +107,22 @@ export default function RootLayout({
                   <Link href="/jobs">
                     <CalendarCheck />
                     <span>Jobs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Time Clock">
+                  <Link href="/time-clock">
+                    <Clock />
+                    <span>Time Clock</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Orders">
+                  <Link href="/orders">
+                    <ShoppingCart />
+                    <span>Orders</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
