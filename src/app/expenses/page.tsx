@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { format, isWithinInterval } from 'date-fns';
 import { PlusCircle, Download, CalendarIcon } from 'lucide-react';
 import UploadExpenseDialog from '@/components/expenses/UploadExpenseDialog';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { collectionGroup, getDocs, query } from 'firebase/firestore';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,6 +29,7 @@ import { downloadCsv } from '@/lib/utils';
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const { firestore } = useFirebase();
+  const { user, isUserLoading } = useUser();
   const [allExpenses, setAllExpenses] = React.useState<Expense[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
@@ -42,7 +43,7 @@ export default function ExpensesPage() {
 
   React.useEffect(() => {
     const fetchAllExpenses = async () => {
-        if (!firestore) return;
+        if (!firestore || !user) return;
         setIsLoading(true);
         try {
             const expensesQuery = query(collectionGroup(firestore, 'expenses'));
@@ -55,8 +56,13 @@ export default function ExpensesPage() {
             setIsLoading(false);
         }
     }
-    fetchAllExpenses();
-  }, [firestore]);
+
+    if (!isUserLoading && user) {
+      fetchAllExpenses();
+    } else if (!isUserLoading && !user) {
+      setIsLoading(false);
+    }
+  }, [firestore, user, isUserLoading]);
 
 
   const filteredExpenses = React.useMemo(() => {
@@ -106,6 +112,10 @@ export default function ExpensesPage() {
         }
     });
     downloadCsv(dataToExport, `expenses-report-${new Date().toISOString().split('T')[0]}.csv`);
+  }
+  
+  if (isLoading || isUserLoading) {
+    return <div>Loading expenses...</div>;
   }
 
   return (
@@ -200,13 +210,7 @@ export default function ExpensesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                        Loading expenses...
-                    </TableCell>
-                  </TableRow>
-              ) : filteredExpenses.length > 0 ? (
+              {filteredExpenses.length > 0 ? (
                 filteredExpenses.map((expense) => {
                     const techName = MOCK_TECHNICIANS.find(t => t.id === expense.technicianId)?.name || 'N/A';
                     return (

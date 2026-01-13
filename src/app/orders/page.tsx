@@ -2,22 +2,24 @@
 'use client';
 
 import OrderListClient from '@/components/orders/OrderListClient';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { OrderItem } from '@/lib/types';
 
 export default function OrdersPage() {
-    const { firestore } = useFirebase();
+    const { firestore, user, isUserLoading } = useFirebase();
 
     // Using a mock user ID as login is removed.
     const mockUserId = 'tech-jake';
 
     const itemsQuery = useMemoFirebase(() => {
-        if (!firestore || !mockUserId) return null;
+        if (!firestore || !user) return null;
         return query(collection(firestore, 'technicians', mockUserId, 'shoppingList'));
-    }, [firestore, mockUserId]);
+    }, [firestore, user]);
 
-    const { data: initialItems, isLoading } = useCollection<OrderItem>(itemsQuery);
+    const { data: initialItems, isLoading: isItemsLoading } = useCollection<OrderItem>(itemsQuery);
+
+    const isLoading = isUserLoading || isItemsLoading;
 
     if (isLoading) {
         return <div>Loading shopping list...</div>

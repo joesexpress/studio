@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import AddQuoteDialog from '@/components/quotes/AddQuoteDialog';
 import { Badge } from '@/components/ui/badge';
@@ -40,14 +40,14 @@ const getStatusVariant = (status: QuoteStatus) => {
 
 export default function QuotesPage() {
   const [isAddQuoteOpen, setIsAddQuoteOpen] = React.useState(false);
-  const { firestore, user } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
 
   const quotesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'quotes'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+  }, [firestore, user]);
 
-  const { data: quotes, isLoading } = useCollection<Quote>(quotesQuery);
+  const { data: quotes, isLoading: isQuotesLoading } = useCollection<Quote>(quotesQuery);
   
   const getQuoteDate = (quote: Quote, field: 'createdAt' | 'validUntil') => {
     const dateValue = quote[field];
@@ -70,6 +70,8 @@ export default function QuotesPage() {
     }));
     downloadCsv(dataToExport, `quotes-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
+  
+  const isLoading = isUserLoading || isQuotesLoading;
 
   return (
     <>

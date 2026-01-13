@@ -15,31 +15,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 // import UploadPriceBookDialog from './UploadPriceBookDialog';
 
 export default function PriceBookPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const { firestore } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
 
   // Using a mock user ID as login is removed.
   const mockUserId = 'tech-jake';
 
-  // The price book is now an external link, so we may not need to query for entries.
-  // Keeping this here in case you want to revert or have a hybrid approach.
   const priceBookQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'technicians', mockUserId, 'priceBookEntries');
-  }, [firestore]);
+  }, [firestore, user]);
   
-  const { data: priceBookEntries, isLoading } = useCollection<PriceBookEntry>(priceBookQuery);
+  const { data: priceBookEntries, isLoading: isEntriesLoading } = useCollection<PriceBookEntry>(priceBookQuery);
 
   const getEntryDate = (entry: PriceBookEntry) => {
     if (!entry.uploadedAt) return 'N/A';
     const date = (entry.uploadedAt as any).toDate();
     return format(date, 'PPP p');
   };
+
+  const isLoading = isUserLoading || isEntriesLoading;
 
   return (
     <>

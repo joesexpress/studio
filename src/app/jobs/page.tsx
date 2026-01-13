@@ -6,26 +6,26 @@ import type { Todo, CalendarEvent } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TodoList from '@/components/jobs/TodoList';
 import JobCalendar from '@/components/jobs/JobCalendar';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function JobsPage() {
-  const { firestore } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
 
   // Using a mock user ID as login is removed.
   const mockUserId = 'tech-jake';
 
   const todosQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'technicians', mockUserId, 'todos');
-  }, [firestore]);
-  const { data: todos } = useCollection<Todo>(todosQuery);
+  }, [firestore, user]);
+  const { data: todos, isLoading: isTodosLoading } = useCollection<Todo>(todosQuery);
   
   const calendarEventsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'technicians', mockUserId, 'calendarEvents');
-  }, [firestore]);
-  const { data: calendarEvents } = useCollection<CalendarEvent>(calendarEventsQuery);
+  }, [firestore, user]);
+  const { data: calendarEvents, isLoading: isEventsLoading } = useCollection<CalendarEvent>(calendarEventsQuery);
 
 
   const events = useMemo(() => {
@@ -36,6 +36,12 @@ export default function JobsPage() {
       end: (event.end as any).toDate(),
     }));
   }, [calendarEvents]);
+  
+  const isLoading = isUserLoading || isTodosLoading || isEventsLoading;
+
+  if (isLoading) {
+    return <div>Loading tasks and calendar...</div>;
+  }
 
   return (
     <div className="flex flex-col h-full">

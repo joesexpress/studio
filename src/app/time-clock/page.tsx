@@ -28,14 +28,10 @@ export default function TimeClockPage() {
           for (const id of techIds) {
               if (!id) continue; // Skip if id is invalid
               const logsRef = collection(firestore, 'technicians', id, 'timeLogs');
-              const snapshot = await getDocs(logsRef);
+              const snapshot = await getDocs(query(logsRef, orderBy('timeIn', 'desc')));
               snapshot.forEach((doc: any) => logs.push({ id: doc.id, ...doc.data() } as TimeLog));
           }
-          setAllTimeLogs(logs.sort((a,b) => {
-            const timeA = a.timeIn ? (a.timeIn as any).toDate().getTime() : 0;
-            const timeB = b.timeIn ? (b.timeIn as any).toDate().getTime() : 0;
-            return timeB - timeA;
-          }));
+          setAllTimeLogs(logs); // Already sorted by query
         } catch(e) {
             console.error("Error fetching time logs:", e);
         } finally {

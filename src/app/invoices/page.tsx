@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import RecordDetailsSheet from '@/components/records/RecordDetailsSheet';
 import { format } from 'date-fns';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collectionGroup, query, where } from 'firebase/firestore';
 import { Download } from 'lucide-react';
 import { downloadCsv } from '@/lib/utils';
@@ -24,19 +24,19 @@ export default function InvoicesPage() {
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
-  const { firestore } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
 
   const invoicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // This query requires a composite index. The firestore.rules file has a comment
-    // that should trigger its creation automatically.
+    // Wait until firestore and user are available before creating the query.
+    if (!firestore || !user) return null;
+    
     return query(
       collectionGroup(firestore, 'serviceRecords'),
       where('status', '==', 'Owed')
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
-  const { data: invoices, isLoading } = useCollection<ServiceRecord>(invoicesQuery);
+  const { data: invoices, isLoading: isInvoicesLoading } = useCollection<ServiceRecord>(invoicesQuery);
 
   const handleViewDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
@@ -66,6 +66,8 @@ export default function InvoicesPage() {
     }));
     downloadCsv(dataToExport, `accounts-receivable-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
+  
+  const isLoading = isUserLoading || isInvoicesLoading;
 
   return (
     <>

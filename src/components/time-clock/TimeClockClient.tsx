@@ -33,7 +33,16 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   
   React.useEffect(() => {
     setTimeLogs(initialTimeLogs);
-  }, [initialTimeLogs])
+    // Check for an active (un-ended) log for the selected technician
+    const existingActiveLog = initialTimeLogs.find(log => log.technicianId === selectedTechnician && !log.timeOut);
+    if(existingActiveLog) {
+      setActiveLog(existingActiveLog);
+      setNotes(existingActiveLog.notes || '');
+    } else {
+      setActiveLog(null);
+      setNotes('');
+    }
+  }, [initialTimeLogs, selectedTechnician]);
 
   React.useEffect(() => {
     // Set current time only on the client
@@ -43,16 +52,31 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   }, []);
 
   const handleClockIn = () => {
-    if (!selectedTechnician) {
+    if (!selectedTechnician || !firestore) {
       toast({ title: 'Please select a technician first.', variant: 'destructive'});
       return;
     }
+    const logId = `log-${Date.now()}`;
     const newLog = {
-      id: `log-${Date.now()}`,
+      id: logId,
       timeIn: new Date(),
       technicianId: selectedTechnician,
+      timeOut: null,
+      notes: '',
     };
+    
     setActiveLog(newLog);
+
+    const logRef = doc(firestore, 'technicians', selectedTechnician, 'timeLogs', logId);
+    setDocumentNonBlocking(logRef, { 
+      id: newLog.id,
+      technicianId: newLog.technicianId,
+      timeIn: newLog.timeIn,
+      timeOut: null,
+      notes: '',
+      totalHours: 0
+     }, {});
+
     toast({
       title: 'Clocked In',
       description: `Your shift started at ${format(newLog.timeIn, 'p')}`,
@@ -78,18 +102,13 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     const logRef = doc(firestore, 'technicians', selectedTechnician, 'timeLogs', completedLog.id);
     
     const dataToSave = {
-        id: completedLog.id,
-        technicianId: completedLog.technicianId,
-        timeIn: completedLog.timeIn, // Will be converted by Firestore
         timeOut: completedLog.timeOut, // Will be converted
         notes: completedLog.notes,
         totalHours: completedLog.totalHours
     };
-    // We use setDoc here because we created the ID on the client
-    setDocumentNonBlocking(logRef, dataToSave, {});
+    // We use setDoc here with merge true to update the existing log
+    setDocumentNonBlocking(logRef, dataToSave, { merge: true });
 
-    // Optimistically update UI
-    setTimeLogs(prev => [completedLog as any, ...prev]);
     setActiveLog(null);
     setNotes('');
     toast({
@@ -155,7 +174,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
                     <SelectValue placeholder="Select Technician" />
                 </SelectTrigger>
                 <SelectContent>
-                    {technicians.map(tech => (
+                    {technicians.filter(t => !['tbd', 'fcfs'].includes(t.id)).map(tech => (
                         <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
                     ))}
                 </SelectContent>
