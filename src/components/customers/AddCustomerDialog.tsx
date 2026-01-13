@@ -19,7 +19,7 @@ import { useFirebase } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import AddressAutocomplete from '../ui/address-autocomplete';
+
 
 type AddCustomerDialogProps = {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
   const [isSaving, setIsSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const [technicianId, setTechnicianId] = React.useState<string>('');
-  const [address, setAddress] = React.useState('');
+  
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,18 +44,9 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
       });
       return;
     }
-     if (!address) {
-      toast({
-          title: 'Validation Error',
-          description: 'Please enter a valid address.',
-          variant: 'destructive',
-      });
-      return;
-    }
-
+    
     setIsSaving(true);
     const formData = new FormData(event.currentTarget);
-    formData.set('address', address); // Overwrite with state value
     formData.append('technicianId', technicianId);
 
     const result = await addCustomerAndJob(formData);
@@ -80,7 +71,6 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
     if (!open) {
       formRef.current?.reset();
       setTechnicianId('');
-      setAddress('');
     }
     onOpenChange(open);
   }
@@ -102,7 +92,7 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
             </div>
             <div className="grid gap-2">
               <Label htmlFor="address">Address</Label>
-              <AddressAutocomplete onAddressSelect={(place) => setAddress(place.formatted_address || '')} />
+              <Input id="address" name="address" required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="phone">Phone</Label>
