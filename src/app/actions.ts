@@ -5,12 +5,22 @@ import { revalidatePath } from "next/cache";
 import { extractDataFromServiceRecord } from "@/ai/flows/extract-data-from-service-records";
 import { summarizeServiceRecord } from "@/ai/flows/summarize-service-records";
 import { z } from "zod";
-import { doc, serverTimestamp, collection } from 'firebase/firestore';
-import { initializeFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp, collection, getFirestore } from 'firebase/firestore';
+import { initializeFirebase as initializeFirebaseClient, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import type { ServiceRecord, Customer, Technician } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 import Papa from 'papaparse';
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { firebaseConfig } from "@/firebase/config";
+
+// Server-side Firebase initialization
+function initializeFirebaseServer() {
+    if (!getApps().length) {
+        return initializeApp(firebaseConfig);
+    }
+    return getApp();
+}
 
 const fileSchema = z.object({
   fileUrl: z.string().url({ message: 'File must be a valid URL' }),
@@ -63,7 +73,8 @@ export async function processServiceRecord(formData: FormData) {
       status: (extractedData.status as any) || 'N/A'
     };
     
-    const { firestore } = initializeFirebase();
+    const firebaseApp = initializeFirebaseServer();
+    const firestore = getFirestore(firebaseApp);
 
     // Save to technician's subcollection
     const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
@@ -120,7 +131,8 @@ export async function addCustomerAndJob(formData: FormData) {
   }
 
   const { name, address, phone, jobDescription, technicianId } = validation.data;
-  const { firestore } = initializeFirebase();
+  const firebaseApp = initializeFirebaseServer();
+  const firestore = getFirestore(firebaseApp);
   const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
 
   const customerId = `cust-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
@@ -200,7 +212,8 @@ export async function processCsvImport(formData: FormData) {
       }
   
       const records: any[] = parsedData.data;
-      const { firestore } = initializeFirebase();
+      const firebaseApp = initializeFirebaseServer();
+      const firestore = getFirestore(firebaseApp);
       let processedCount = 0;
   
       for (const record of records) {
@@ -284,6 +297,8 @@ export async function processCsvImport(formData: FormData) {
       return { success: false, error: error.message || "An unexpected error occurred while processing the CSV file." };
     }
   }
+    
+
     
 
     
