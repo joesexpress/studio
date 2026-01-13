@@ -8,9 +8,20 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { FirebaseClientProvider, useFirebase } from '@/firebase';
 import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function AuthWrapper({ children }: { children: React.ReactNode }) {
   return <FirebaseClientProvider>{children}</FirebaseClientProvider>;
@@ -22,6 +33,7 @@ function LoginFormContent() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
   const { auth } = useFirebase();
@@ -84,6 +96,30 @@ function LoginFormContent() {
     }
   }
 
+  const handlePasswordReset = async () => {
+    if (!resetEmail) {
+        toast({
+            title: 'Email Required',
+            description: 'Please enter your email address.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, resetEmail);
+        toast({
+            title: 'Password Reset Email Sent',
+            description: `If an account exists for ${resetEmail}, a password reset link has been sent.`,
+        });
+    } catch (error: any) {
+        toast({
+            title: 'Error Sending Reset Email',
+            description: error.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+        });
+    }
+  }
+
   const isLoading = isSigningIn || isUserLoading;
 
   if (isUserLoading || user) {
@@ -143,6 +179,35 @@ function LoginFormContent() {
               'Enter as Guest'
             )}
           </Button>
+            <div className="text-center text-sm">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="link" className="p-0 h-auto">Forgot Password?</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Your Password</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Enter your email address below and we'll send you a link to reset your password.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                                id="reset-email"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={resetEmail}
+                                onChange={(e) => setResetEmail(e.target.value)}
+                            />
+                        </div>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handlePasswordReset}>Send Reset Link</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
         </div>
       </CardContent>
     </Card>
