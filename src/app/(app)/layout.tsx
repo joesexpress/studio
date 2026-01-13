@@ -31,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 width={180}
                 height={50}
                 className="w-auto h-auto"
+                unoptimized
             />
           </div>
         </SidebarHeader>

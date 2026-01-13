@@ -1,5 +1,13 @@
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 
 export default function Home() {
-  redirect('/records');
+  const cookieStore = cookies();
+  const isAuthenticated = cookieStore.get('auth');
+
+  if (isAuthenticated) {
+    redirect('/records');
+  } else {
+    redirect('/login');
+  }
 }
