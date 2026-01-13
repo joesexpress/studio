@@ -1,21 +1,21 @@
 
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import type { TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, ServiceRecord, Customer } from '@/lib/types';
 import DashboardClient from '@/components/dashboard/DashboardClient';
 import DashboardFilters from '@/components/dashboard/DashboardFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Wrench, UserMinus, UserCheck } from 'lucide-react';
+import { DollarSign, Users, Wrench, UserMinus } from 'lucide-react';
 import { format, isWithinInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { useFirebase, useUser } from '@/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, collectionGroup, query } from 'firebase/firestore';
 
 
 function useDashboardData(
   serviceRecords: ServiceRecord[] | null,
-  allCustomers: Customer[] | null,
+  allCustomers: Omit<Customer, 'records'>[] | null,
   filters: { dateRange: DateRange | undefined, technician: string, status: string }
 ) {
   return useMemo(() => {
@@ -138,45 +138,19 @@ export default function DashboardPage() {
     status: '',
   });
 
-  const { firestore } = useFirebase();
-  const { user, isAuthReady } = useUser();
-  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
-  const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const { firestore, isAuthReady } = useFirebase();
+  
+  const customersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'customers');
+  }, [firestore]);
+  const { data: allCustomers, isLoading: isCustomersLoading } = useCollection<Omit<Customer, 'records'>>(customersQuery);
 
-  useEffect(() => {
-    const fetchAllData = async () => {
-        if (!firestore || !user) return;
-        setIsDataLoading(true);
-        try {
-            // Fetch all customers first
-            const customersQuery = query(collection(firestore, 'customers'));
-            const customersSnapshot = await getDocs(customersQuery);
-            const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-            setAllCustomers(customers);
-
-            // Then fetch all service records from each customer's subcollection
-            const allRecords: ServiceRecord[] = [];
-            for (const customer of customers) {
-                const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
-                const recordsSnapshot = await getDocs(recordsRef);
-                recordsSnapshot.forEach(doc => {
-                    allRecords.push({ id: doc.id, ...doc.data() } as ServiceRecord);
-                });
-            }
-            setServiceRecords(allRecords);
-
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-        } finally {
-            setIsDataLoading(false);
-        }
-    }
-    
-    if (isAuthReady) {
-        fetchAllData();
-    }
-  }, [firestore, user, isAuthReady]);
+  const recordsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collectionGroup(firestore, 'serviceRecords');
+  }, [firestore]);
+  const { data: serviceRecords, isLoading: isRecordsLoading } = useCollection<ServiceRecord>(recordsQuery);
 
 
   const { 
@@ -184,7 +158,6 @@ export default function DashboardPage() {
     revenueData, 
     statusData, 
     totalRevenue, 
-    totalCustomers, 
     totalJobs, 
     uniqueTechnicians,
     inactiveCustomers,
@@ -192,7 +165,7 @@ export default function DashboardPage() {
     isDataReady,
 } = useDashboardData(serviceRecords, allCustomers, filters);
 
-  const isLoading = !isAuthReady || isDataLoading;
+  const isLoading = !isAuthReady || isCustomersLoading || isRecordsLoading;
 
   return (
     <div className="flex flex-col gap-6">
