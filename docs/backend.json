@@ -244,9 +244,7 @@
     }
   },
   "auth": {
-    "providers": [
-      "password"
-    ]
+    "providers": []
   },
   "firestore": {
     "structure": [
@@ -374,5 +372,3 @@
     "reasoning": "The Firestore structure is designed to be secure, scalable, and easily debuggable, adhering to the core design principles and strategy mandates. It prioritizes authorization independence through denormalization, ensuring that security rules can be simple and robust. The structure supports the required QAPs by segregating data with different access needs into separate collections.\n\nAuthorization Independence:\nServiceRecord subcollections under technician and customer will contain denormalized copies of technicianId and customerId in each document.\n\nQAPs:\nList operations are secured by the path-based ownership, allowing the list function to be performed without get() calls.\n\nEach collection is designed with a homogeneous security posture, making rules easier to understand and maintain. The use of explicit state modeling with the 'status' field ensures data clarity and predictability."
   }
 }
-
-    

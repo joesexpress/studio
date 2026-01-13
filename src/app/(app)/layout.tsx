@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import { FirebaseClientProvider } from '@/firebase';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const userAvatar = getPlaceholderImage('user-avatar');
   const logoUrl =
     'https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png';
 
