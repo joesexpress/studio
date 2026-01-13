@@ -123,8 +123,8 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Service Records</h1>
-          <p className="text-muted-foreground">Manage and analyze all your service records.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Master Job Sheet</h1>
+          <p className="text-muted-foreground">A consolidated view of all service records across all technicians.</p>
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>

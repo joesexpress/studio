@@ -2,19 +2,16 @@
 'use client';
 import RecordsPageClient from '@/components/records/RecordsPageClient';
 import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, orderBy } from 'firebase/firestore';
 
 export default function RecordsPage() {
   const { firestore, user, isUserLoading } = useFirebase();
 
-  // Using a mock user ID as login is removed.
-  const mockUserId = 'tech-jake';
-
   const serviceRecordsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Query to get all service records for the default technician
+    // Query to get all service records across all technicians
     return query(
-        collection(firestore, 'technicians', mockUserId, 'serviceRecords'),
+        collectionGroup(firestore, 'serviceRecords'),
         orderBy('date', 'desc')
     );
   }, [firestore, user]);

@@ -74,10 +74,10 @@ export default function RootLayout({
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Records">
+                <SidebarMenuButton asChild tooltip="Master Job Sheet">
                   <Link href="/records">
                     <AppWindow />
-                    <span>Service Records</span>
+                    <span>Master Job Sheet</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
