@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { FirebaseClientProvider, useFirebase } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { onAuthStateChanged, User, sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,7 @@ function LoginFormContent() {
   const { auth } = useFirebase();
 
   useEffect(() => {
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsUserLoading(false);
@@ -62,19 +63,43 @@ function LoginFormContent() {
     }
 
     try {
-      initiateEmailSignIn(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast({
-        title: 'Signing In...',
-        description: 'Please wait while we sign you in.',
+        title: 'Sign In Successful!',
+        description: "You're now logged in.",
       });
-      // The onAuthStateChanged listener will handle the redirect.
+      // onAuthStateChanged will handle the redirect
     } catch (error: any) {
-      toast({
-        title: 'Sign In Failed',
-        description: error.message || 'An unexpected error occurred.',
-        variant: 'destructive',
-      });
-      setIsSigningIn(false);
+      if (error.code === 'auth/user-not-found') {
+        // If user doesn't exist, create a new account
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          toast({
+            title: 'Account Created!',
+            description: 'Welcome! Your new account has been created.',
+          });
+        } catch (createError: any) {
+          toast({
+            title: 'Account Creation Failed',
+            description: createError.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+          });
+        }
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        toast({
+            title: 'Sign In Failed',
+            description: 'The password you entered is incorrect. Please try again.',
+            variant: 'destructive',
+        });
+      } else {
+        toast({
+            title: 'Sign In Failed',
+            description: error.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+        });
+      }
+    } finally {
+        setIsSigningIn(false);
     }
   };
 
@@ -146,6 +171,7 @@ function LoginFormContent() {
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSignIn()}
                     disabled={isLoading}
                 />
             </div>
