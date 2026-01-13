@@ -15,7 +15,7 @@ import { Button } from '../ui/button';
 import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { format, isWithinInterval } from 'date-fns';
-import { Download, ListFilter, FileUp } from 'lucide-react';
+import { Download, ListFilter, FileUp, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -28,6 +28,12 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import ImportCsvDialog from '../records/ImportCsvDialog';
+import { Checkbox } from '../ui/checkbox';
+import { useFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
@@ -50,6 +56,9 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
+  const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
+  const { firestore } = useFirebase();
+  const { toast } = useToast();
 
   const [filters, setFilters] = React.useState<{
       technician: string,
@@ -121,6 +130,43 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
     }));
     downloadCsv(dataToExport, `service-records-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(filteredRecords.map(r => r.id));
+    } else {
+      setSelectedRows([]);
+    }
+  }
+
+  const handleRowSelect = (rowId: string) => {
+    setSelectedRows(prev => 
+      prev.includes(rowId) 
+        ? prev.filter(id => id !== rowId)
+        : [...prev, rowId]
+    );
+  }
+  
+  const handleDeleteSelected = () => {
+    if (!firestore) return;
+
+    const recordsToDelete = allRecords.filter(r => selectedRows.includes(r.id));
+    
+    recordsToDelete.forEach(record => {
+      const recordRef = doc(firestore, 'customers', record.customerId, 'serviceRecords', record.id);
+      deleteDocumentNonBlocking(recordRef);
+    });
+    
+    toast({
+        title: `${selectedRows.length} record(s) deleted`,
+        description: 'The selected records have been removed.'
+    });
+
+    setSelectedRows([]);
+  }
+
+  const isAllSelected = filteredRecords.length > 0 && selectedRows.length === filteredRecords.length;
+  const isSomeSelected = selectedRows.length > 0 && selectedRows.length < filteredRecords.length;
   
   return (
     <>
@@ -130,6 +176,30 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
           <p className="text-muted-foreground">A consolidated view of all service records.</p>
         </div>
         <div className="flex items-center gap-2">
+           {selectedRows.length > 0 && (
+             <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected ({selectedRows.length})
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete {selectedRows.length} service record(s). This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteSelected}>
+                    Continue
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+           )}
            <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
             <FileUp className="mr-2 h-4 w-4" />
             Import from CSV
@@ -237,6 +307,14 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
           <Table>
             <TableHeader>
               <TableRow>
+                 <TableHead padding="checkbox" className="w-12">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
+                    aria-label="Select all"
+                    data-state={isSomeSelected ? 'indeterminate' : (isAllSelected ? 'checked' : 'unchecked')}
+                  />
+                </TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Technician</TableHead>
@@ -248,7 +326,14 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
             </TableHeader>
             <TableBody>
               {filteredRecords.length > 0 ? filteredRecords.map(record => (
-                <TableRow key={record.id}>
+                <TableRow key={record.id} data-state={selectedRows.includes(record.id) && 'selected'}>
+                   <TableCell padding="checkbox">
+                    <Checkbox
+                        checked={selectedRows.includes(record.id)}
+                        onCheckedChange={() => handleRowSelect(record.id)}
+                        aria-label="Select row"
+                    />
+                  </TableCell>
                   <TableCell>{getRecordDate(record)}</TableCell>
                   <TableCell>{record.customer}</TableCell>
                   <TableCell>{record.technician}</TableCell>
@@ -271,7 +356,7 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     No records found for the selected filters.
                   </TableCell>
                 </TableRow>
