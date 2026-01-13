@@ -110,8 +110,8 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(memoizedTargetRefOrQuery)]); // Re-run if the target query/reference changes.
+  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     // This check is disabled in production.
     if (process.env.NODE_ENV === 'development') {
