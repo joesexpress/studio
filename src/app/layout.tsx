@@ -145,10 +145,10 @@ export default function RootLayout({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Price Book">
-                  <Link href="/price-book">
+                  <a href="https://drive.google.com/drive/folders/1sGSRgseVIoXM6POdzyvti4qh88iHimS6?usp=drive_link" target="_blank" rel="noopener noreferrer">
                     <Book />
                     <span>Price Book</span>
-                  </Link>
+                  </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

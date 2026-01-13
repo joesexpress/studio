@@ -23,6 +23,8 @@ export default function PriceBookPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const { firestore, user } = useFirebase();
 
+  // The price book is now an external link, so we may not need to query for entries.
+  // Keeping this here in case you want to revert or have a hybrid approach.
   const priceBookQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'technicians', user.uid, 'priceBookEntries');
@@ -41,7 +43,9 @@ export default function PriceBookPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Price Book</h1>
-          <p className="text-muted-foreground">Manage your pricing documents.</p>
+          <p className="text-muted-foreground">
+            This page is for uploading price documents. The main Price Book is accessed via the sidebar link.
+          </p>
         </div>
         <Button size="sm" onClick={() => setIsUploadOpen(true)}>
           <PlusCircle className="mr-2 h-4 w-4" />
@@ -84,7 +88,7 @@ export default function PriceBookPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={3} className="h-24 text-center">
-                    No price book documents found.
+                    No internal price book documents found.
                   </TableCell>
                 </TableRow>
               )}
