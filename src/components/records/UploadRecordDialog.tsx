@@ -66,46 +66,56 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
         description: `Processing ${selectedFiles.length} service record(s). This may take a moment.`,
     });
 
-    for (const file of selectedFiles) {
+    const uploadPromises = selectedFiles.map(file => {
+      return new Promise<{ success: boolean, fileName: string, error?: string }>((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         
-        await new Promise<void>((resolve, reject) => {
-            reader.onload = async () => {
-                const fileDataUri = reader.result as string;
-                const formData = new FormData();
-                formData.append('file', fileDataUri);
-                formData.append('technicianId', mockUserId);
-                
-                const result = await processServiceRecord(formData);
-          
-                if (!result.success) {
-                    toast({
-                        title: `Failed to process ${file.name}`,
-                        description: result.error || 'An unknown error occurred.',
-                        variant: 'destructive',
-                    });
-                }
-                resolve();
-            };
-            reader.onerror = () => {
-                toast({
-                    title: `File Read Error`,
-                    description: `Could not read ${file.name}.`,
-                    variant: 'destructive',
-                });
-                resolve(); // Resolve to continue with next file
+        reader.onload = async () => {
+          try {
+            const fileDataUri = reader.result as string;
+            const formData = new FormData();
+            formData.append('file', fileDataUri);
+            formData.append('technicianId', mockUserId);
+            
+            const result = await processServiceRecord(formData);
+      
+            if (!result.success) {
+              resolve({ success: false, fileName: file.name, error: result.error });
+            } else {
+              resolve({ success: true, fileName: file.name });
             }
-        });
-    }
+          } catch (e) {
+            resolve({ success: false, fileName: file.name, error: 'An unexpected error occurred during processing.' });
+          }
+        };
+
+        reader.onerror = () => {
+            resolve({ success: false, fileName: file.name, error: `Could not read the file.` });
+        };
+      });
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const failedUploads = results.filter(r => !r.success);
 
     setIsUploading(false);
     setSelectedFiles(null);
-    toast({
-        title: 'Upload Complete',
-        description: 'All service records have been processed.',
-    });
     onOpenChange(false);
+
+    if (failedUploads.length > 0) {
+        toast({
+            title: 'Some Uploads Failed',
+            description: `${failedUploads.map(f => f.fileName).join(', ')}. Please check the files and try again.`,
+            variant: 'destructive',
+            duration: 10000,
+        });
+    } else {
+        toast({
+            title: 'Upload Complete',
+            description: 'All service records have been processed successfully.',
+        });
+    }
   };
   
   const onDialogClose = (open: boolean) => {
