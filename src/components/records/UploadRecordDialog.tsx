@@ -13,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { processServiceRecordAI } from '@/app/actions';
 import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { doc } from 'firebase/firestore';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import { extractDataFromServiceRecord } from '@/ai/flows/extract-data-from-service-records';
+import { summarizeServiceRecord } from '@/ai/flows/summarize-service-records';
 
 type UploadRecordDialogProps = {
   isOpen: boolean;
@@ -91,14 +92,9 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
             const downloadURL = await getDownloadURL(uploadResult.ref);
 
             // 2. Pass the data URI to the server action for AI processing
-            const result = await processServiceRecordAI(fileDataUri);
-      
-            if (!result.success || !result.data) {
-              resolve({ success: false, fileName: file.name, error: result.error });
-              return;
-            }
+            const extractedData = await extractDataFromServiceRecord({ documentDataUri: fileDataUri });
+            const summaryData = await summarizeServiceRecord({ recordText: extractedData.descriptionOfWork });
             
-            const extractedData = result.data;
             const technicianName = MOCK_TECHNICIANS.find(t => t.id === mockUserId)?.name || 'N/A';
             const total = parseFloat(extractedData.totalCost.replace(/[^0-9.-]+/g,"")) || 0;
             const recordId = `rec-${Date.now()}`;
@@ -109,7 +105,7 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
               customer: extractedData.customer,
               technician: technicianName,
               date: new Date(),
-              summary: extractedData.summary,
+              summary: summaryData.summary,
               address: extractedData.address,
               phone: extractedData.phone,
               model: extractedData.model,
