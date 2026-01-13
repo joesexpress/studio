@@ -227,6 +227,20 @@
         }
       },
       "required": [ "id", "date", "technicianId", "amount", "description", "vendor", "receiptUrl" ]
+    },
+    "PriceBookEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PriceBookEntry",
+      "type": "object",
+      "description": "Represents a pricing document in the price book.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the price book entry." },
+        "fileName": { "type": "string", "description": "The name of the uploaded file." },
+        "fileUrl": { "type": "string", "format": "uri", "description": "The URL to the uploaded file in storage." },
+        "uploadedAt": { "type": "string", "format": "date-time", "description": "The timestamp when the file was uploaded." },
+        "technicianId": { "type": "string", "description": "The ID of the technician who uploaded the file." }
+      },
+      "required": ["id", "fileName", "fileUrl", "uploadedAt", "technicianId"]
     }
   },
   "auth": {
@@ -343,8 +357,22 @@
                 { "name": "expenseId", "description": "The unique identifier for the expense record." }
             ]
         }
+      },
+      {
+        "path": "/technicians/{technicianId}/priceBookEntries/{entryId}",
+        "definition": {
+            "entityName": "PriceBookEntry",
+            "schema": { "$ref": "#/backend/entities/PriceBookEntry" },
+            "description": "Stores price book entries for a technician.",
+            "params": [
+                { "name": "technicianId", "description": "The unique identifier for the technician." },
+                { "name": "entryId", "description": "The unique identifier for the price book entry." }
+            ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to be secure, scalable, and easily debuggable, adhering to the core design principles and strategy mandates. It prioritizes authorization independence through denormalization, ensuring that security rules can be simple and robust. The structure supports the required QAPs by segregating data with different access needs into separate collections.\n\nAuthorization Independence:\nServiceRecord subcollections under technician and customer will contain denormalized copies of technicianId and customerId in each document.\n\nQAPs:\nList operations are secured by the path-based ownership, allowing the list function to be performed without get() calls.\n\nEach collection is designed with a homogeneous security posture, making rules easier to understand and maintain. The use of explicit state modeling with the 'status' field ensures data clarity and predictability."
   }
 }
+
+    

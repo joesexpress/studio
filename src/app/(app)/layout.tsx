@@ -11,7 +11,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { AppWindow, BarChart3, Settings, Users, CalendarCheck, FileText } from 'lucide-react';
+import { AppWindow, BarChart3, Settings, Users, CalendarCheck, FileText, Book } from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getPlaceholderImage } from '@/lib/placeholder-data';
@@ -80,6 +80,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Price Book">
+                  <Link href="/price-book">
+                    <Book />
+                    <span>Price Book</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
@@ -113,3 +121,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </FirebaseClientProvider>
   );
 }
+
+    

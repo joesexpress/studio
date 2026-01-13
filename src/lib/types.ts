@@ -80,4 +80,14 @@ export type Expense = {
   vendor: string;
   receiptUrl: string;
   serviceRecordId?: string;
-}
+};
+
+export type PriceBookEntry = {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: Timestamp;
+  technicianId: string;
+};
+
+    

@@ -153,5 +153,15 @@ service cloud.firestore {
     match /technicians/{technicianId}/expenses/{expenseId} {
       allow read, write: if isOwner(technicianId) && ownsItem(technicianId);
     }
+
+    /**
+     * @description Controls access to a technician's price book entries.
+     * @path /technicians/{technicianId}/priceBookEntries/{entryId}
+     * @principle Only the owner technician can manage their own price book.
+     */
+    match /technicians/{technicianId}/priceBookEntries/{entryId} {
+      allow read, write: if isOwner(technicianId) && ownsItem(technicianId);
+    }
   }
 }
+    
