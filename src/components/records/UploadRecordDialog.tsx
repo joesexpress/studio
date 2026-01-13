@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -15,9 +16,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { doc } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 import { extractDataFromServiceRecord } from '@/ai/flows/extract-data-from-service-records';
 import { summarizeServiceRecord } from '@/ai/flows/summarize-service-records';
@@ -25,10 +26,9 @@ import { summarizeServiceRecord } from '@/ai/flows/summarize-service-records';
 type UploadRecordDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onRecordAdded: (record: ServiceRecord) => void;
 };
 
-export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded }: UploadRecordDialogProps) {
+export default function UploadRecordDialog({ isOpen, onOpenChange }: UploadRecordDialogProps) {
   const { toast } = useToast();
   const { storage, firestore } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
@@ -124,11 +124,11 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
 
             // Save to technician's subcollection
             const techRecordRef = doc(firestore, 'technicians', mockUserId, 'serviceRecords', recordId);
-            setDocumentNonBlocking(techRecordRef, newRecord, {});
+            addDocumentNonBlocking(techRecordRef, newRecord);
 
             // Save to customer's subcollection
             const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-            setDocumentNonBlocking(customerRecordRef, newRecord, {});
+            addDocumentNonBlocking(customerRecordRef, newRecord);
 
             // Also save/update the main customer profile
             const customerDocRef = doc(firestore, 'customers', customerId);
@@ -139,7 +139,6 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
               phone: extractedData.phone,
             }, { merge: true });
 
-            onRecordAdded({ ...newRecord, date: newRecord.date.toISOString() } as unknown as ServiceRecord);
             resolve({ success: true, fileName: file.name });
             
         } catch (e: any) {

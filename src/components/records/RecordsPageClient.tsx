@@ -52,7 +52,6 @@ const getStatusVariant = (status: ServiceRecordStatus) => {
   };
 
 export default function RecordsPageClient({ initialRecords }: RecordsPageClientProps) {
-  const [records, setRecords] = React.useState<ServiceRecord[]>(initialRecords);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<ServiceRecordStatus[]>([]);
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
@@ -60,12 +59,8 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    setRecords(initialRecords);
-  }, [initialRecords]);
-
   const filteredRecords = React.useMemo(() => {
-    return records.filter(record => {
+    return (initialRecords || []).filter(record => {
       const searchMatch =
         searchTerm === '' ||
         record.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -81,15 +76,11 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
         const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
         return dateB - dateA;
     });
-  }, [records, searchTerm, statusFilter]);
+  }, [initialRecords, searchTerm, statusFilter]);
   
   const handleViewDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
     setIsDetailsOpen(true);
-  };
-
-  const handleAddNewRecord = (newRecord: ServiceRecord) => {
-    setRecords(prev => [newRecord, ...prev]);
   };
 
   const toggleStatusFilter = (status: ServiceRecordStatus) => {
@@ -230,7 +221,6 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
       <UploadRecordDialog
         isOpen={isUploadOpen}
         onOpenChange={setIsUploadOpen}
-        onRecordAdded={handleAddNewRecord}
       />
       <ImportCsvDialog
         isOpen={isImportOpen}
