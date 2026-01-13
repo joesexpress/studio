@@ -117,7 +117,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             customerCache.set(normalizedCustomerName, customerId);
         }
   
-        const recordId = `rec-${Date.now()}-${processedCount}`;
+        const recordId = `rec-${customerId}-${Date.now()}-${processedCount}`;
   
         const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
         
@@ -161,7 +161,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
   
         // Save to customer's subcollection ONLY. This is the single source of truth.
         const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-        addDocumentNonBlocking(collection(firestore, 'customers', customerId, 'serviceRecords'), newRecord);
+        setDocumentNonBlocking(customerRecordRef, newRecord, { merge: true });
         
         processedCount++;
         setProgress((processedCount / totalRecords) * 100);
