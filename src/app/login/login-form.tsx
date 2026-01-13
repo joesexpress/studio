@@ -34,23 +34,19 @@ function LoginFormContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
-  const [user, setUser] = useState<User | null>(null);
-  const [isUserLoading, setIsUserLoading] = useState(true);
-  const { auth } = useFirebase();
+  const { auth, user, isUserLoading } = useFirebase();
 
   useEffect(() => {
-    if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsUserLoading(false);
-      if (user) {
-        router.push('/records');
-      }
-    });
-    return () => unsubscribe();
-  }, [auth, router]);
+    if (user) {
+      router.push('/records');
+    }
+  }, [user, router]);
   
   const handleSignIn = async () => {
+    if (!auth) {
+        toast({ title: "Authentication service not ready.", variant: "destructive" });
+        return;
+    }
     setIsSigningIn(true);
     if (!email || !password) {
         toast({
@@ -68,10 +64,9 @@ function LoginFormContent() {
         title: 'Sign In Successful!',
         description: "You're now logged in.",
       });
-      // onAuthStateChanged will handle the redirect
+      // The useEffect will handle the redirect
     } catch (error: any) {
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        // If user doesn't exist (or generic invalid credential), try creating a new account
         try {
           await createUserWithEmailAndPassword(auth, email, password);
           toast({
@@ -79,12 +74,10 @@ function LoginFormContent() {
             description: 'Welcome! Your new account has been created.',
           });
         } catch (createError: any) {
-            // If creation also fails, it's likely a bad password or other issue.
             let errorMessage = createError.message || 'An unexpected error occurred.';
             if (createError.code === 'auth/weak-password') {
                 errorMessage = 'The password is too weak. Please use at least 6 characters.';
-            }
-             else if (error.code === 'auth/invalid-credential') {
+            } else if (error.code === 'auth/invalid-credential') {
                 errorMessage = 'The password you entered is incorrect. Please try again or use "Forgot Password?".'
             }
           toast({
@@ -122,6 +115,10 @@ function LoginFormContent() {
   }
 
   const handlePasswordReset = async () => {
+    if (!auth) {
+        toast({ title: "Authentication service not ready.", variant: "destructive" });
+        return;
+    }
     if (!resetEmail) {
         toast({
             title: 'Email Required',
