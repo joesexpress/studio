@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 
 export default function CustomersPage() {
   const { firestore } = useFirebase();
-  const { user, isUserLoading } = useUser();
+  const { user, isAuthReady } = useUser();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,7 +31,7 @@ export default function CustomersPage() {
             
             const totalBilled = records
               .filter(r => r.status === 'Paid' || r.status === 'Owed')
-              .reduce((sum, r) => sum + r.total, 0);
+              .reduce((sum, r) => sum + (r.total || 0), 0);
 
             return {
                 ...customer,
@@ -50,17 +50,13 @@ export default function CustomersPage() {
       }
     };
     
-    if (!isUserLoading && user) {
+    if (isAuthReady) {
         fetchCustomersAndRecords();
-    } else if (!isUserLoading && !user) {
-        setIsLoading(false);
-        setCustomers([]);
     }
+  }, [firestore, user, isAuthReady]);
 
-  }, [firestore, user, isUserLoading]);
 
-
-  if (isLoading || isUserLoading) {
+  if (isLoading || !isAuthReady) {
     return <div>Loading customers...</div>
   }
 

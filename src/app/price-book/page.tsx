@@ -21,7 +21,7 @@ import { collection } from 'firebase/firestore';
 
 export default function PriceBookPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, user, isAuthReady } = useFirebase();
 
   // Using a mock user ID as login is removed.
   const mockUserId = 'tech-jake';
@@ -31,7 +31,7 @@ export default function PriceBookPage() {
     return collection(firestore, 'technicians', mockUserId, 'priceBookEntries');
   }, [firestore, user]);
   
-  const { data: priceBookEntries, isLoading: isEntriesLoading } = useCollection<PriceBookEntry>(priceBookQuery);
+  const { data: priceBookEntries, isLoading: isEntriesLoading } = useCollection<PriceBookEntry>(priceBookQuery, { skip: !isAuthReady });
 
   const getEntryDate = (entry: PriceBookEntry) => {
     if (!entry.uploadedAt) return 'N/A';
@@ -39,7 +39,7 @@ export default function PriceBookPage() {
     return format(date, 'PPP p');
   };
 
-  const isLoading = isUserLoading || isEntriesLoading;
+  const isLoading = !isAuthReady || isEntriesLoading;
 
   return (
     <>

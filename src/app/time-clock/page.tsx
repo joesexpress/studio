@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 
 export default function TimeClockPage() {
   const { firestore } = useFirebase();
-  const { user, isUserLoading: isAuthLoading } = useUser();
+  const { user, isAuthReady } = useUser();
   const [allTimeLogs, setAllTimeLogs] = useState<TimeLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,15 +39,12 @@ export default function TimeClockPage() {
         }
     };
 
-    if (!isAuthLoading && user) {
+    if (isAuthReady) {
         fetchLogs();
-    } else if (!isAuthLoading && !user) {
-        setIsLoading(false);
     }
-
-  }, [firestore, user, isAuthLoading]);
+  }, [firestore, user, isAuthReady]);
   
-  if (isLoading || isAuthLoading) {
+  if (isLoading || !isAuthReady) {
     return <div>Loading time clock...</div>
   }
 

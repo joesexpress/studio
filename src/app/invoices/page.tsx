@@ -24,10 +24,9 @@ export default function InvoicesPage() {
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, user, isAuthReady } = useFirebase();
 
   const invoicesQuery = useMemoFirebase(() => {
-    // Wait until firestore and user are available before creating the query.
     if (!firestore || !user) return null;
     
     return query(
@@ -36,7 +35,9 @@ export default function InvoicesPage() {
     );
   }, [firestore, user]);
 
-  const { data: invoices, isLoading: isInvoicesLoading } = useCollection<ServiceRecord>(invoicesQuery);
+  const { data: invoices, isLoading: isInvoicesLoading } = useCollection<ServiceRecord>(invoicesQuery, {
+    skip: !isAuthReady,
+  });
 
   const handleViewDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
@@ -67,7 +68,7 @@ export default function InvoicesPage() {
     downloadCsv(dataToExport, `accounts-receivable-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
   
-  const isLoading = isUserLoading || isInvoicesLoading;
+  const isLoading = !isAuthReady || isInvoicesLoading;
 
   return (
     <>

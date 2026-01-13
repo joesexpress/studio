@@ -5,7 +5,7 @@ import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase
 import { collectionGroup, query, orderBy } from 'firebase/firestore';
 
 export default function RecordsPage() {
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, user, isAuthReady } = useFirebase();
 
   const serviceRecordsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -16,9 +16,9 @@ export default function RecordsPage() {
     );
   }, [firestore, user]);
 
-  const { data: initialRecords, isLoading: areRecordsLoading } = useCollection(serviceRecordsQuery);
+  const { data: initialRecords, isLoading: areRecordsLoading } = useCollection(serviceRecordsQuery, { skip: !isAuthReady });
 
-  const isLoading = isUserLoading || areRecordsLoading;
+  const isLoading = !isAuthReady || areRecordsLoading;
 
   if (isLoading) {
     // You can return a loading spinner here

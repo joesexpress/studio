@@ -40,14 +40,14 @@ const getStatusVariant = (status: QuoteStatus) => {
 
 export default function QuotesPage() {
   const [isAddQuoteOpen, setIsAddQuoteOpen] = React.useState(false);
-  const { firestore, user, isUserLoading } = useFirebase();
+  const { firestore, user, isAuthReady } = useFirebase();
 
   const quotesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'quotes'), orderBy('createdAt', 'desc'));
   }, [firestore, user]);
 
-  const { data: quotes, isLoading: isQuotesLoading } = useCollection<Quote>(quotesQuery);
+  const { data: quotes, isLoading: isQuotesLoading } = useCollection<Quote>(quotesQuery, { skip: !isAuthReady });
   
   const getQuoteDate = (quote: Quote, field: 'createdAt' | 'validUntil') => {
     const dateValue = quote[field];
@@ -71,7 +71,7 @@ export default function QuotesPage() {
     downloadCsv(dataToExport, `quotes-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
   
-  const isLoading = isUserLoading || isQuotesLoading;
+  const isLoading = !isAuthReady || isQuotesLoading;
 
   if (isLoading) {
     return <div>Loading quotes...</div>;

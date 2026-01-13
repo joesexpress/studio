@@ -10,8 +10,7 @@ import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase
 import { collection } from 'firebase/firestore';
 
 export default function JobsPage() {
-  const { firestore, user, isUserLoading } = useFirebase();
-  const [isLoading, setIsLoading] = useState(true);
+  const { firestore, user, isAuthReady } = useFirebase();
 
   // Using a mock user ID as login is removed.
   // In a real app, you'd get this from the logged-in user.
@@ -21,13 +20,13 @@ export default function JobsPage() {
     if (!firestore || !user) return null;
     return collection(firestore, 'technicians', mockUserId, 'todos');
   }, [firestore, user]);
-  const { data: todos, isLoading: isTodosLoading } = useCollection<Todo>(todosQuery);
+  const { data: todos, isLoading: isTodosLoading } = useCollection<Todo>(todosQuery, { skip: !isAuthReady });
   
   const calendarEventsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'technicians', mockUserId, 'calendarEvents');
   }, [firestore, user]);
-  const { data: calendarEvents, isLoading: isEventsLoading } = useCollection<CalendarEvent>(calendarEventsQuery);
+  const { data: calendarEvents, isLoading: isEventsLoading } = useCollection<CalendarEvent>(calendarEventsQuery, { skip: !isAuthReady });
 
 
   const events = useMemo(() => {
@@ -39,10 +38,7 @@ export default function JobsPage() {
     }));
   }, [calendarEvents]);
   
-  useEffect(() => {
-    const combinedLoading = isUserLoading || isTodosLoading || isEventsLoading;
-    setIsLoading(combinedLoading);
-  }, [isUserLoading, isTodosLoading, isEventsLoading]);
+  const isLoading = !isAuthReady || isTodosLoading || isEventsLoading;
 
 
   if (isLoading) {

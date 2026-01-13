@@ -10,7 +10,7 @@ import { DollarSign, Users, Wrench, UserMinus, UserCheck } from 'lucide-react';
 import { format, isWithinInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { useFirebase, useUser } from '@/firebase';
-import { collectionGroup, getDocs, query, collection } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 
 
 function useDashboardData(
@@ -81,7 +81,7 @@ function useDashboardData(
             technicians[record.technician] = { technician: record.technician, totalJobs: 0, totalRevenue: 0 };
         }
         technicians[record.technician].totalJobs += 1;
-        technicians[record.technician].totalRevenue += record.total;
+        technicians[record.technician].totalRevenue += record.total || 0;
       }
 
       // Revenue over time
@@ -90,12 +90,12 @@ function useDashboardData(
         if (!revenueByMonth[month]) {
           revenueByMonth[month] = 0;
         }
-        revenueByMonth[month] += record.total;
+        revenueByMonth[month] += record.total || 0;
       }
       
       // Total Revenue
       if (record.status === 'Paid' || record.status === 'Owed') {
-        totalRevenue += record.total;
+        totalRevenue += record.total || 0;
       }
 
       // Status Counts
@@ -139,7 +139,7 @@ export default function DashboardPage() {
   });
 
   const { firestore } = useFirebase();
-  const { user, isUserLoading: isAuthLoading } = useUser();
+  const { user, isAuthReady } = useUser();
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
   const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
@@ -173,14 +173,10 @@ export default function DashboardPage() {
         }
     }
     
-    if (!isAuthLoading && user) {
+    if (isAuthReady) {
         fetchAllData();
-    } else if (!isAuthLoading && !user) {
-        setIsDataLoading(false);
-        setServiceRecords([]);
-        setAllCustomers([]);
     }
-  }, [firestore, user, isAuthLoading]);
+  }, [firestore, user, isAuthReady]);
 
 
   const { 
@@ -196,7 +192,7 @@ export default function DashboardPage() {
     isDataReady,
 } = useDashboardData(serviceRecords, allCustomers, filters);
 
-  const isLoading = isAuthLoading || isDataLoading;
+  const isLoading = !isAuthReady || isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">

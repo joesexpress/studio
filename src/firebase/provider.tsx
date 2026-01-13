@@ -13,6 +13,7 @@ interface FirebaseProviderProps {
   firestore: Firestore;
   auth: Auth;
   storage: FirebaseStorage;
+  isAuthReady: boolean;
 }
 
 // Internal state for user authentication
@@ -33,6 +34,7 @@ export interface FirebaseContextState {
   user: User | null;
   isUserLoading: boolean; // True during initial auth check
   userError: Error | null; // Error from auth listener
+  isAuthReady: boolean; // True after anonymous sign-in is complete
 }
 
 // Return type for useFirebase()
@@ -44,6 +46,7 @@ export interface FirebaseServicesAndUser {
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  isAuthReady: boolean;
 }
 
 // Return type for useUser() - specific to user auth state
@@ -51,6 +54,7 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
+  isAuthReady: boolean;
 }
 
 // React Context
@@ -65,6 +69,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
   storage,
+  isAuthReady,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
@@ -106,8 +111,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
+      isAuthReady,
     };
-  }, [firebaseApp, firestore, auth, storage, userAuthState]);
+  }, [firebaseApp, firestore, auth, storage, userAuthState, isAuthReady]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -140,6 +146,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
+    isAuthReady: context.isAuthReady,
   };
 };
 
@@ -184,6 +191,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => { // Renamed from useAuthUser
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
-  return { user, isUserLoading, userError };
+  const { user, isUserLoading, userError, isAuthReady } = useFirebase(); // Leverages the main hook
+  return { user, isUserLoading, userError, isAuthReady };
 };

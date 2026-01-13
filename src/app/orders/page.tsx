@@ -8,8 +8,7 @@ import { OrderItem } from '@/lib/types';
 import { useState, useEffect } from 'react';
 
 export default function OrdersPage() {
-    const { firestore, user, isUserLoading } = useFirebase();
-    const [isLoading, setIsLoading] = useState(true);
+    const { firestore, user, isAuthReady } = useFirebase();
 
     // Using a mock user ID as login is removed.
     const mockUserId = 'tech-jake';
@@ -19,11 +18,9 @@ export default function OrdersPage() {
         return query(collection(firestore, 'technicians', mockUserId, 'shoppingList'));
     }, [firestore, user]);
 
-    const { data: initialItems, isLoading: isItemsLoading } = useCollection<OrderItem>(itemsQuery);
+    const { data: initialItems, isLoading: isItemsLoading } = useCollection<OrderItem>(itemsQuery, { skip: !isAuthReady });
 
-    useEffect(() => {
-        setIsLoading(isUserLoading || isItemsLoading);
-    }, [isUserLoading, isItemsLoading]);
+    const isLoading = !isAuthReady || isItemsLoading;
 
 
     if (isLoading) {

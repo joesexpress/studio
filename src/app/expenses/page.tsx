@@ -29,7 +29,7 @@ import { downloadCsv } from '@/lib/utils';
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const { firestore } = useFirebase();
-  const { user, isUserLoading } = useUser();
+  const { user, isAuthReady } = useUser();
   const [allExpenses, setAllExpenses] = React.useState<Expense[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
@@ -57,12 +57,10 @@ export default function ExpensesPage() {
         }
     }
 
-    if (!isUserLoading && user) {
+    if (isAuthReady) {
       fetchAllExpenses();
-    } else if (!isUserLoading && !user) {
-      setIsLoading(false);
     }
-  }, [firestore, user, isUserLoading]);
+  }, [firestore, user, isAuthReady]);
 
 
   const filteredExpenses = React.useMemo(() => {
@@ -114,7 +112,7 @@ export default function ExpensesPage() {
     downloadCsv(dataToExport, `expenses-report-${new Date().toISOString().split('T')[0]}.csv`);
   }
   
-  if (isLoading || isUserLoading) {
+  if (isLoading || !isAuthReady) {
     return <div>Loading expenses...</div>;
   }
 

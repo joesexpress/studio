@@ -53,16 +53,17 @@ export interface InternalQuery extends Query<DocumentData> {
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+    options?: { skip?: boolean }
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!options?.skip);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    if (!memoizedTargetRefOrQuery || options?.skip) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -110,7 +111,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [memoizedTargetRefOrQuery, options?.skip]); // Re-run if the target query/reference changes.
   
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     // This check is disabled in production.
