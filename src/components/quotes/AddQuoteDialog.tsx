@@ -26,6 +26,7 @@ import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import AddressAutocomplete from '../ui/address-autocomplete';
 
 type AddQuoteDialogProps = {
   isOpen: boolean;
@@ -221,7 +222,7 @@ export default function AddQuoteDialog({ isOpen, onOpenChange }: AddQuoteDialogP
                     </div>
                     <div className="grid gap-2 md:col-span-2">
                         <Label htmlFor="newCustomerAddress">Address</Label>
-                        <Input id="newCustomerAddress" value={newCustomerAddress} onChange={e => setNewCustomerAddress(e.target.value)} />
+                        <AddressAutocomplete onAddressSelect={(place) => setNewCustomerAddress(place.formatted_address || '')} />
                     </div>
                 </div>
             )}

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Customer } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import AddressAutocomplete from '../ui/address-autocomplete';
 
 type EditCustomerDialogProps = {
   isOpen: boolean;
@@ -25,10 +26,13 @@ type EditCustomerDialogProps = {
 export default function EditCustomerDialog({ isOpen, onOpenChange, customer, onSave }: EditCustomerDialogProps) {
   const [editedCustomer, setEditedCustomer] = React.useState<Partial<Customer> | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [address, setAddress] = React.useState('');
+
 
   React.useEffect(() => {
     if (customer) {
       setEditedCustomer(customer);
+      setAddress(customer.address);
     }
   }, [customer, isOpen]);
 
@@ -40,7 +44,7 @@ export default function EditCustomerDialog({ isOpen, onOpenChange, customer, onS
   const handleSave = () => {
     if (editedCustomer) {
       setIsSaving(true);
-      onSave(editedCustomer);
+      onSave({ ...editedCustomer, address });
       setIsSaving(false);
       onOpenChange(false);
     }
@@ -72,13 +76,12 @@ export default function EditCustomerDialog({ isOpen, onOpenChange, customer, onS
             <Label htmlFor="address" className="text-right">
               Address
             </Label>
-            <Input
-              id="address"
-              name="address"
-              value={editedCustomer?.address || ''}
-              onChange={handleInputChange}
-              className="col-span-3"
-            />
+            <div className="col-span-3">
+              <AddressAutocomplete
+                initialValue={address}
+                onAddressSelect={(place) => setAddress(place.formatted_address || '')}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="phone" className="text-right">
