@@ -15,27 +15,6 @@ const fileSchema = z.object({
   }),
 });
 
-async function getUserId(): Promise<string | null> {
-  // This is a server-side context, so we can't use hooks.
-  // We need to initialize a temporary app instance to get the current user.
-  // This is not ideal but necessary in Server Actions.
-  try {
-    const { auth } = initializeFirebase();
-    // This is tricky on the server. The user is not automatically available.
-    // For this app's purpose (single user/tech), we can proceed but a multi-user app would need a different approach.
-    // Let's assume the client passes the UID, or we have a fixed one for now.
-    // The current implementation of non-blocking login means we can't easily get the user here.
-    // We will rely on the client to know the user's UID. Let's adjust.
-    // For anonymous auth, we can re-evaluate this.
-    // For now, let's hard-code a user ID for server actions as a placeholder.
-    // A better approach would be passing the UID from the client.
-    const user = auth.currentUser;
-    return user ? user.uid : null;
-  } catch (e) {
-    return null; // No user if Firebase isn't initialized
-  }
-}
-
 export async function processServiceRecord(formData: FormData) {
   const rawFormData = {
     fileDataUri: formData.get('file'),
@@ -60,7 +39,7 @@ export async function processServiceRecord(formData: FormData) {
     const recordId = `rec-${Date.now()}`;
     const customerId = `cust-${extractedData.customer.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
 
-    const newRecord: ServiceRecord = {
+    const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
       id: recordId,
       customer: extractedData.customer,
       technician: extractedData.technician,
