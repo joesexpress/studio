@@ -1,77 +1,81 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { login } from './actions';
+import { FirebaseClientProvider, useFirebase, useUser } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
-export default function LoginForm() {
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  return <FirebaseClientProvider>{children}</FirebaseClientProvider>;
+}
+
+function LoginFormContent() {
   const router = useRouter();
   const { toast } = useToast();
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const { auth } = useFirebase();
+  const { user, isUserLoading } = useUser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    const result = await login(password);
-
-    if (result.success) {
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back!',
-      });
+  useEffect(() => {
+    // If user is logged in, redirect them.
+    if (user) {
       router.push('/records');
-    } else {
-      setError(result.error);
+    }
+  }, [user, router]);
+  
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    try {
+      initiateAnonymousSignIn(auth);
       toast({
-        title: 'Login Failed',
-        description: result.error,
+        title: 'Signing In...',
+        description: 'You are being signed in as a guest.',
+      });
+      // The onAuthStateChanged listener will handle the redirect.
+    } catch (error: any) {
+      toast({
+        title: 'Sign In Failed',
+        description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
-      setIsLoading(false);
+      setIsSigningIn(false);
     }
   };
+
+  const isLoading = isSigningIn || isUserLoading;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Welcome</CardTitle>
-        <CardDescription>Enter the password to access the application.</CardDescription>
+        <CardTitle>Welcome to K & D</CardTitle>
+        <CardDescription>Click the button below to sign in as a guest.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <div className="space-y-4">
+          <Button onClick={handleSignIn} className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing In...
+                Please wait...
               </>
             ) : (
-              'Sign In'
+              'Enter as Guest'
             )}
           </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );
+}
+
+export default function LoginForm() {
+    return (
+        <AuthWrapper>
+            <LoginFormContent />
+        </AuthWrapper>
+    )
 }

@@ -1,8 +1,10 @@
-export type ServiceRecordStatus = 'Paid' | 'Owed' | 'Estimate' | 'No Charge';
+import type { Timestamp } from 'firebase/firestore';
+
+export type ServiceRecordStatus = 'Paid' | 'Owed' | 'Estimate' | 'No Charge' | 'N/A';
 
 export type ServiceRecord = {
   id: string;
-  date: string;
+  date: string | Timestamp;
   technician: string;
   customer: string;
   address: string;
@@ -18,6 +20,9 @@ export type ServiceRecord = {
   status: ServiceRecordStatus;
   fileUrl: string;
   summary: string;
+  // Firestore specific fields
+  technicianId?: string;
+  customerId?: string;
 };
 
 export type TechnicianPerformance = {
@@ -32,10 +37,18 @@ export type RevenueDataPoint = {
 };
 
 export type Customer = {
+  id: string;
   name: string;
   address: string;
   phone: string;
   totalJobs: number;
   totalBilled: number;
   records: ServiceRecord[];
+};
+
+export type Technician = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
 };

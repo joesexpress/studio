@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import type { ServiceRecord } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, FileText, Bot } from 'lucide-react';
+import { format } from 'date-fns';
 
 type RecordDetailsSheetProps = {
   record: ServiceRecord | null;
@@ -27,13 +28,19 @@ const DetailItem = ({ label, value }: { label: string; value: React.ReactNode })
 export default function RecordDetailsSheet({ record, isOpen, onOpenChange }: RecordDetailsSheetProps) {
   if (!record) return null;
 
+  const getRecordDate = () => {
+    if (!record.date) return 'N/A';
+    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+    return format(date, 'PPP');
+  }
+
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg w-full">
         <SheetHeader className="pr-8">
           <SheetTitle>Service Record Details</SheetTitle>
           <SheetDescription>
-            Work performed for {record.customer} on {new Date(record.date).toLocaleDateString()}.
+            Work performed for {record.customer} on {getRecordDate()}.
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-6 py-6 overflow-y-auto h-[calc(100vh-8rem)] pr-6">
@@ -50,7 +57,7 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange }: Rec
             <h3 className="font-semibold text-base">Record Information</h3>
             <DetailItem label="Customer" value={record.customer} />
             <DetailItem label="Technician" value={record.technician} />
-            <DetailItem label="Date" value={new Date(record.date).toLocaleDateString()} />
+            <DetailItem label="Date" value={getRecordDate()} />
             <DetailItem label="Address" value={record.address} />
             <DetailItem label="Phone" value={record.phone} />
           </div>
@@ -79,7 +86,7 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange }: Rec
             <div className="grid grid-cols-3 gap-2 text-sm items-center">
                 <span className="text-muted-foreground">Status</span>
                 <div className="col-span-2">
-                    <Badge variant={record.status === 'Paid' ? 'default' : record.status === 'Owed' ? 'destructive' : 'secondary'} className="capitalize">
+                    <Badge variant={record.status === 'Paid' ? 'secondary' : record.status === 'Owed' ? 'destructive' : 'default'} className="capitalize">
                       {record.status}
                     </Badge>
                 </div>

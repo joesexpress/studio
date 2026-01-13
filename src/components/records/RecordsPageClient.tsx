@@ -25,6 +25,7 @@ import RecordDetailsSheet from './RecordDetailsSheet';
 import UploadRecordDialog from './UploadRecordDialog';
 import { PlusCircle, ListFilter } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
+import { format } from 'date-fns';
 
 type RecordsPageClientProps = {
   initialRecords: ServiceRecord[];
@@ -51,14 +52,18 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    setRecords(initialRecords);
+  }, [initialRecords]);
+
   const filteredRecords = React.useMemo(() => {
     return records.filter(record => {
       const searchMatch =
         searchTerm === '' ||
-        record.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.technician.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.address.toLowerCase().includes(searchTerm.toLowerCase());
+        record.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.technician?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        record.address?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const statusMatch = statusFilter.length === 0 || statusFilter.includes(record.status);
 
@@ -80,6 +85,12 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
       prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
     );
   };
+
+  const getRecordDate = (record: ServiceRecord) => {
+    if (!record.date) return 'N/A';
+    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+    return format(date, 'P');
+  }
   
   return (
     <>
@@ -140,9 +151,9 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRecords.map(record => (
+              {filteredRecords.length > 0 ? filteredRecords.map(record => (
                 <TableRow key={record.id}>
-                  <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{getRecordDate(record)}</TableCell>
                   <TableCell>{record.customer}</TableCell>
                   <TableCell>{record.technician}</TableCell>
                   <TableCell className="text-right">
@@ -159,7 +170,13 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    No records found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

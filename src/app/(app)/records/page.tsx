@@ -1,13 +1,25 @@
-import { serviceRecords } from '@/lib/mock-data';
+'use client';
 import RecordsPageClient from '@/components/records/RecordsPageClient';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import type { ServiceRecord } from '@/lib/types';
+import { collection, query, orderBy } from 'firebase/firestore';
 
-async function getRecords() {
-  // In a real app, this would be a database call
-  return serviceRecords;
-}
+export default function RecordsPage() {
+  const { firestore, user } = useFirebase();
 
-export default async function RecordsPage() {
-  const initialRecords = await getRecords();
+  const serviceRecordsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'technicians', user.uid, 'serviceRecords'),
+      orderBy('date', 'desc')
+    );
+  }, [firestore, user]);
 
-  return <RecordsPageClient initialRecords={initialRecords} />;
+  const { data: initialRecords, isLoading } = useCollection<ServiceRecord>(serviceRecordsQuery);
+  
+  if (isLoading) {
+    return <div>Loading records...</div>
+  }
+
+  return <RecordsPageClient initialRecords={initialRecords || []} />;
 }

@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { Button } from '../ui/button';
+import { format } from 'date-fns';
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
@@ -34,10 +35,22 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!selectedCustomer && customers.length > 0) {
+        setSelectedCustomer(customers[0]);
+    }
+  }, [customers, selectedCustomer]);
+
   const handleViewRecordDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
     setIsDetailsOpen(true);
   };
+
+  const getRecordDate = (record: ServiceRecord) => {
+    if (!record.date) return 'N/A';
+    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+    return format(date, 'P');
+  }
   
   return (
     <>
@@ -57,9 +70,9 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
             <div className="flex flex-col">
               {customers.map((customer) => (
                 <button
-                  key={customer.name}
+                  key={customer.id}
                   onClick={() => setSelectedCustomer(customer)}
-                  className={`p-4 text-left border-b hover:bg-accent/50 ${selectedCustomer?.name === customer.name ? 'bg-accent' : ''}`}
+                  className={`p-4 text-left border-b hover:bg-accent/50 ${selectedCustomer?.id === customer.id ? 'bg-accent' : ''}`}
                 >
                   <p className="font-semibold">{customer.name}</p>
                   <p className="text-sm text-muted-foreground">{customer.totalJobs} jobs</p>
@@ -104,9 +117,13 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {selectedCustomer.records.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
+                    {selectedCustomer.records.sort((a,b) => {
+                        const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : (a.date as any).toDate()).getTime() : 0;
+                        const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
+                        return dateB - dateA;
+                    }).map((record) => (
                       <TableRow key={record.id}>
-                        <TableCell>{new Date(record.date).toLocaleDate-String()}</TableCell>
+                        <TableCell>{getRecordDate(record)}</TableCell>
                         <TableCell>{record.technician}</TableCell>
                         <TableCell>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(record.total)}</TableCell>
                         <TableCell>
