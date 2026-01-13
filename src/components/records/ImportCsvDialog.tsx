@@ -78,7 +78,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         if (customerName === 'N/A' || !customerName.trim()) {
             processedCount++;
             setProgress((processedCount / totalRecords) * 100);
-            continue;
+            continue; // Skip rows without a customer name
         };
   
         const techName = record.Tech || 'N/A';
@@ -118,8 +118,8 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
           serial: record.Serial || 'N/A',
           filterSize: record['Filter Size'] || 'N/A',
           freonType: record.Freon || 'N/A',
-          laborHours: record['Total Hours'] || 'N/A',
-          breakdown: record.Breakdown || 'N/A',
+          laborHours: String(record['Total Hours'] || 'N/A'),
+          breakdown: String(record.Breakdown || 'N/A'),
           description: description,
           total: total,
           fileUrl: record['File Link'] || '#',
@@ -154,7 +154,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         description: `${processedCount} records have been imported. The page will now refresh.`,
       });
       // A simple way to refresh the data is to reload the page.
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 2000);
 
     } catch (e: any) {
         console.error('CSV Import Error:', e);
