@@ -54,12 +54,15 @@ export type Technician = {
   email: string;
 };
 
+export type ResponsiblePerson = 'Jake' | 'Phil' | 'Derek' | 'FCFS';
+
 export type Todo = {
   id: string;
   task: string;
   isCompleted: boolean;
   createdAt: Timestamp;
   technicianId: string;
+  responsible: ResponsiblePerson;
 };
 
 export type CalendarEvent = {
@@ -93,8 +96,8 @@ export type PriceBookEntry = {
 export type TimeLog = {
     id: string;
     technicianId: string;
-    timeIn: Timestamp;
-    timeOut: Timestamp | null;
+    timeIn: Timestamp | Date;
+    timeOut: Timestamp | Date | null;
     notes: string;
     totalHours?: number;
 };

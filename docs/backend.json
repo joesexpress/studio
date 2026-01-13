@@ -166,9 +166,14 @@
         "task": { "type": "string", "description": "The description of the task." },
         "isCompleted": { "type": "boolean", "description": "Whether the task is completed." },
         "createdAt": { "type": "string", "format": "date-time", "description": "The timestamp when the task was created." },
-        "technicianId": { "type": "string", "description": "The ID of the technician this to-do belongs to." }
+        "technicianId": { "type": "string", "description": "The ID of the technician this to-do belongs to." },
+        "responsible": {
+          "type": "string",
+          "description": "The person or entity responsible for the task.",
+          "enum": ["Jake", "Phil", "Derek", "FCFS"]
+        }
       },
-      "required": ["id", "task", "isCompleted", "createdAt", "technicianId"]
+      "required": ["id", "task", "isCompleted", "createdAt", "technicianId", "responsible"]
     },
     "CalendarEvent": {
       "$schema": "http://json-schema.org/draft-07/schema#",
