@@ -20,6 +20,7 @@ import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 import { doc } from 'firebase/firestore';
 import type { ServiceRecord } from '@/lib/types';
+import { Progress } from '@/components/ui/progress';
 
 
 type ImportCsvDialogProps = {
@@ -33,6 +34,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = React.useState(0);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -51,6 +53,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
     }
     
     setIsUploading(true);
+    setProgress(0);
     
     try {
       const fileContent = await selectedFile.text();
@@ -67,11 +70,16 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       }
   
       const records: any[] = parsedData.data;
+      const totalRecords = records.length;
       let processedCount = 0;
   
       for (const record of records) {
         const customerName = record.Customer || 'N/A';
-        if (customerName === 'N/A' || !customerName.trim()) continue;
+        if (customerName === 'N/A' || !customerName.trim()) {
+            processedCount++;
+            setProgress((processedCount / totalRecords) * 100);
+            continue;
+        };
   
         const techName = record.Tech || 'N/A';
         const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
@@ -138,6 +146,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         }, { merge: true });
         
         processedCount++;
+        setProgress((processedCount / totalRecords) * 100);
       }
       
       toast({
@@ -163,6 +172,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
   const onDialogClose = (open: boolean) => {
     if (!open) {
         setSelectedFile(null);
+        setProgress(0);
     }
     onOpenChange(open);
   }
@@ -210,6 +220,12 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
                     />
                 </Label>
             </div> 
+            {isUploading && (
+                <div className="space-y-2">
+                    <Progress value={progress} />
+                    <p className="text-sm text-center text-muted-foreground">{Math.round(progress)}% complete</p>
+                </div>
+            )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onDialogClose(false)}>
