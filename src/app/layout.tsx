@@ -153,14 +153,6 @@ export default function RootLayout({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Map" disabled>
-                  <Link href="#">
-                    <Map />
-                    <span>Map</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Company Drive">
                   <a href="https://drive.google.com/drive/folders/1sGSRgseVIoXM6POdzyvti4qh88iHimS6" target="_blank" rel="noopener noreferrer">
