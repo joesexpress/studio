@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -14,9 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { processCsvImport } from '@/app/actions';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import Papa from 'papaparse';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import { doc } from 'firebase/firestore';
+import type { ServiceRecord } from '@/lib/types';
+
 
 type ImportCsvDialogProps = {
   isOpen: boolean;
@@ -25,6 +29,7 @@ type ImportCsvDialogProps = {
 
 export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialogProps) {
   const { toast } = useToast();
+  const { firestore } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -37,34 +42,110 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
 
   const handleImport = async () => {
     if (!selectedFile) {
-      toast({
-        title: 'No file selected',
-        description: 'Please select a CSV file to import.',
-        variant: 'destructive',
-      });
+      toast({ title: 'No file selected', variant: 'destructive' });
+      return;
+    }
+     if (!firestore) {
+      toast({ title: 'Database not ready', variant: 'destructive' });
       return;
     }
     
     setIsUploading(true);
     
     try {
-        const fileContent = await selectedFile.text();
-        const formData = new FormData();
-        formData.append('fileContent', fileContent);
+      const fileContent = await selectedFile.text();
+      const parsedData = Papa.parse(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: header => header.trim(),
+      });
+  
+      if (parsedData.errors.length > 0) {
+        console.error('CSV Parsing errors:', parsedData.errors);
+        const firstError = parsedData.errors[0];
+        throw new Error(`CSV parsing error on row ${firstError.row}: ${firstError.message} (${firstError.code})`);
+      }
+  
+      const records: any[] = parsedData.data;
+      let processedCount = 0;
+  
+      for (const record of records) {
+        const customerName = record.Customer || 'N/A';
+        if (customerName === 'N/A' || !customerName.trim()) continue;
+  
+        const techName = record.Tech || 'N/A';
+        const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
+        const technicianId = technician?.id || 'tbd';
+  
+        const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+        const recordId = `rec-${Date.now()}-${processedCount}`;
+  
+        const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
         
-        const result = await processCsvImport(formData);
-
-        if (result.success) {
-            toast({
-                title: 'Import Successful',
-                description: `${result.count} records have been imported. The page will now refresh.`,
-            });
-            // A simple way to refresh the data is to reload the page.
-            window.location.reload();
+        let recordDate;
+        if (record.Date) {
+          const parsedDate = new Date(record.Date);
+          if (!isNaN(parsedDate.getTime())) {
+            recordDate = parsedDate;
+          } else {
+            console.warn(`Invalid date format for record, using current date: ${record.Date}`);
+            recordDate = new Date();
+          }
         } else {
-            // Use the specific error from the server action
-            throw new Error(result.error || 'An unknown error occurred during import.');
+          recordDate = new Date();
         }
+  
+        const description = record['Full Description of Work'] || 'N/A';
+        const summary = description.length > 100 ? description.substring(0, 100) + '...' : description;
+  
+        const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
+          id: recordId,
+          customer: customerName,
+          technician: techName,
+          date: recordDate,
+          summary: summary,
+          address: record.Address || 'N/A',
+          phone: record.Phone || 'N/A',
+          model: record.Model || 'N/A',
+          serial: record.Serial || 'N/A',
+          filterSize: record['Filter Size'] || 'N/A',
+          freonType: record.Freon || 'N/A',
+          laborHours: record['Total Hours'] || 'N/A',
+          breakdown: record.Breakdown || 'N/A',
+          description: description,
+          total: total,
+          fileUrl: record['File Link'] || '#',
+          technicianId: technicianId,
+          customerId: customerId,
+          status: (record.Status as any) || 'N/A'
+        };
+  
+        // Save to technician's subcollection
+        const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
+        setDocumentNonBlocking(techRecordRef, newRecord, {});
+  
+        // Save to customer's subcollection
+        const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
+        setDocumentNonBlocking(customerRecordRef, newRecord, {});
+  
+        // Also save/update the main customer profile
+        const customerDocRef = doc(firestore, 'customers', customerId);
+        setDocumentNonBlocking(customerDocRef, {
+          id: customerId,
+          name: customerName,
+          address: record.Address || 'N/A',
+          phone: record.Phone || 'N/A',
+        }, { merge: true });
+        
+        processedCount++;
+      }
+      
+      toast({
+        title: 'Import Successful',
+        description: `${processedCount} records have been imported. The page will now refresh.`,
+      });
+      // A simple way to refresh the data is to reload the page.
+      window.location.reload();
 
     } catch (e: any) {
         console.error('CSV Import Error:', e);
@@ -149,5 +230,3 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
     </Dialog>
   );
 }
-
-    

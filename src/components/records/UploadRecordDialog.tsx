@@ -13,11 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { processServiceRecord } from '@/app/actions';
+import { processServiceRecordAI } from '@/app/actions';
 import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
-import { useFirebase } from '@/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { doc } from 'firebase/firestore';
+import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 type UploadRecordDialogProps = {
   isOpen: boolean;
@@ -27,7 +29,7 @@ type UploadRecordDialogProps = {
 
 export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded }: UploadRecordDialogProps) {
   const { toast } = useToast();
-  const { storage } = useFirebase();
+  const { storage, firestore } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[] | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -60,8 +62,8 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
       });
       return;
     }
-    if (!storage) {
-        toast({ title: 'Storage service not available', variant: 'destructive' });
+    if (!storage || !firestore) {
+        toast({ title: 'Firebase service not available', variant: 'destructive' });
         return;
     }
     
@@ -75,28 +77,75 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
     const uploadPromises = selectedFiles.map(file => {
       return new Promise<{ success: boolean, fileName: string, error?: string }>(async (resolve) => {
         try {
+            const fileDataUri = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+
             // 1. Upload file to Firebase Storage
             const filePath = `service-records/${mockUserId}/${Date.now()}-${file.name}`;
             const storageRef = ref(storage, filePath);
-            const uploadResult = await uploadBytes(storageRef, file);
+            const uploadResult = await uploadString(storageRef, fileDataUri, 'data_url');
             const downloadURL = await getDownloadURL(uploadResult.ref);
 
-            // 2. Pass the URL to the server action
-            const formData = new FormData();
-            formData.append('fileUrl', downloadURL);
-            formData.append('technicianId', mockUserId);
-            
-            const result = await processServiceRecord(formData);
+            // 2. Pass the data URI to the server action for AI processing
+            const result = await processServiceRecordAI(fileDataUri);
       
-            if (!result.success) {
+            if (!result.success || !result.data) {
               resolve({ success: false, fileName: file.name, error: result.error });
-            } else {
-              if (result.record) {
-                // This will optimistically update the UI, but page reload will show the source of truth
-                onRecordAdded(result.record);
-              }
-              resolve({ success: true, fileName: file.name });
+              return;
             }
+            
+            const extractedData = result.data;
+            const technicianName = MOCK_TECHNICIANS.find(t => t.id === mockUserId)?.name || 'N/A';
+            const total = parseFloat(extractedData.totalCost.replace(/[^0-9.-]+/g,"")) || 0;
+            const recordId = `rec-${Date.now()}`;
+            const customerId = `cust-${extractedData.customer.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+
+            const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
+              id: recordId,
+              customer: extractedData.customer,
+              technician: technicianName,
+              date: new Date(),
+              summary: extractedData.summary,
+              address: extractedData.address,
+              phone: extractedData.phone,
+              model: extractedData.model,
+              serial: extractedData.serial,
+              filterSize: extractedData.filterSize,
+              freonType: extractedData.freonType,
+              laborHours: extractedData.laborHours,
+              breakdown: extractedData.breakdown,
+              description: extractedData.descriptionOfWork,
+              total: total,
+              fileUrl: downloadURL,
+              technicianId: mockUserId,
+              customerId: customerId,
+              status: (extractedData.status as any) || 'N/A'
+            };
+
+            // Save to technician's subcollection
+            const techRecordRef = doc(firestore, 'technicians', mockUserId, 'serviceRecords', recordId);
+            setDocumentNonBlocking(techRecordRef, newRecord, {});
+
+            // Save to customer's subcollection
+            const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
+            setDocumentNonBlocking(customerRecordRef, newRecord, {});
+
+            // Also save/update the main customer profile
+            const customerDocRef = doc(firestore, 'customers', customerId);
+            setDocumentNonBlocking(customerDocRef, {
+              id: customerId,
+              name: extractedData.customer,
+              address: extractedData.address,
+              phone: extractedData.phone,
+            }, { merge: true });
+
+            onRecordAdded({ ...newRecord, date: newRecord.date.toISOString() } as unknown as ServiceRecord);
+            resolve({ success: true, fileName: file.name });
+            
         } catch (e: any) {
             console.error(`Error processing ${file.name}:`, e);
             resolve({ success: false, fileName: file.name, error: e.message || 'An unexpected error occurred during processing.' });

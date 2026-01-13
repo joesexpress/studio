@@ -14,14 +14,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { addCustomerAndJob } from '@/app/actions';
-import { useFirebase, useCollection } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import type { Customer } from '@/lib/types';
+import type { Customer, ServiceRecord } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
 
 
 type AddCustomerDialogProps = {
@@ -83,6 +82,11 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
   };
 
   const createNewCustomerAndJob = async () => {
+     if (!firestore) {
+        toast({ title: "Database not ready", variant: "destructive"});
+        setIsSaving(false);
+        return;
+    }
     if (!technicianId) {
         toast({
             title: 'Validation Error',
@@ -93,29 +97,64 @@ export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerD
         return;
     }
 
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('address', address);
-    formData.append('phone', phone);
-    formData.append('jobDescription', jobDescription);
-    formData.append('technicianId', technicianId);
+    const technicianName = MOCK_TECHNICIANS.find(t => t.id === technicianId)?.name || 'N/A';
+    const customerId = `cust-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
+    const recordId = `rec-${Date.now()}`;
 
-    const result = await addCustomerAndJob(formData);
+    const customerData: Partial<Customer> = {
+      id: customerId,
+      name,
+      address,
+      phone,
+    };
 
-    if (result.success) {
+    const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
+      id: recordId,
+      date: new Date(),
+      technician: technicianName,
+      customer: name,
+      address,
+      phone,
+      model: 'N/A',
+      serial: 'N/A',
+      filterSize: 'N/A',
+      freonType: 'N/A',
+      laborHours: 'N/A',
+      breakdown: 'N/A',
+      description: jobDescription,
+      total: 0,
+      status: 'Scheduled',
+      fileUrl: '#',
+      summary: 'New job scheduled.',
+      technicianId,
+      customerId,
+    };
+
+    try {
+      // Save customer profile
+      const customerRef = doc(firestore, 'customers', customerId);
+      setDocumentNonBlocking(customerRef, customerData, { merge: true });
+
+      // Save service record to technician's subcollection
+      const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
+      setDocumentNonBlocking(techRecordRef, recordData, {});
+
+      // Save service record to customer's subcollection
+      const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
+      setDocumentNonBlocking(customerRecordRef, recordData, {});
+      
       toast({
         title: 'Customer and Job Added',
         description: 'The new customer and their scheduled job have been created.',
       });
       handleOpenChange(false);
-    } else {
-      toast({
-        title: 'Error',
-        description: result.error || 'An unknown error occurred.',
-        variant: 'destructive',
-      });
+
+    } catch (error) {
+      console.error("Error creating customer and job:", error);
+      toast({ title: 'Error', description: "Failed to save new customer and job.", variant: 'destructive' });
+    } finally {
+        setIsSaving(false);
     }
-    setIsSaving(false);
   }
   
   const handleOpenChange = (open: boolean) => {
