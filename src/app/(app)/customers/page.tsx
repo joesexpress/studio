@@ -13,13 +13,13 @@ function useCustomerData(serviceRecords: ServiceRecord[] | null): Customer[] {
     const customersMap: Map<string, Customer> = new Map();
 
     serviceRecords.forEach((record: ServiceRecord) => {
-      if (!record.customer) return;
+      if (!record.customerId) return;
 
-      let customer = customersMap.get(record.customer);
+      let customer = customersMap.get(record.customerId);
 
       if (!customer) {
         customer = {
-          id: record.customerId || record.customer, // Use customerId if available
+          id: record.customerId,
           name: record.customer,
           address: record.address,
           phone: record.phone,
@@ -31,15 +31,17 @@ function useCustomerData(serviceRecords: ServiceRecord[] | null): Customer[] {
 
       customer.totalJobs += 1;
       if (record.status === 'Paid' || record.status === 'Owed') {
-        customer.totalBilled += record.total;
+        const recordTotal = record.total || 0;
+        customer.totalBilled += recordTotal;
       }
       customer.records.push(record);
 
-      // Use latest info
+      // Use latest info from the record
+      customer.name = record.customer;
       customer.address = record.address;
       customer.phone = record.phone;
 
-      customersMap.set(record.customer, customer);
+      customersMap.set(record.customerId, customer);
     });
 
     return Array.from(customersMap.values()).sort((a, b) => b.totalJobs - a.totalJobs);
@@ -60,7 +62,7 @@ export default function CustomersPage() {
   const customers = useCustomerData(serviceRecords);
 
   if (isLoading) {
-    return <div>Loading customers...</div>;
+    return <div className="flex justify-center items-center h-full"><p>Loading customers...</p></div>;
   }
   
   return <CustomersClient customers={customers} />;
