@@ -26,10 +26,13 @@ type UploadExpenseDialogProps = {
 
 export default function UploadExpenseDialog({ isOpen, onOpenChange }: UploadExpenseDialogProps) {
   const { toast } = useToast();
-  const { user, firestore, storage } = useFirebase();
+  const { firestore, storage } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -42,8 +45,8 @@ export default function UploadExpenseDialog({ isOpen, onOpenChange }: UploadExpe
       toast({ title: 'No file selected', variant: 'destructive' });
       return;
     }
-    if (!user || !firestore || !storage) {
-      toast({ title: 'Authentication or Firebase service error', variant: 'destructive' });
+    if (!firestore || !storage) {
+      toast({ title: 'Firebase service error', variant: 'destructive' });
       return;
     }
 
@@ -59,7 +62,7 @@ export default function UploadExpenseDialog({ isOpen, onOpenChange }: UploadExpe
       });
 
       // 1. Upload file to Firebase Storage
-      const filePath = `receipts/${user.uid}/${Date.now()}-${selectedFile.name}`;
+      const filePath = `receipts/${mockUserId}/${Date.now()}-${selectedFile.name}`;
       const storageRef = ref(storage, filePath);
       const uploadTask = await uploadString(storageRef, fileDataUri, 'data_url');
       const receiptUrl = await getDownloadURL(uploadTask.ref);
@@ -77,11 +80,11 @@ export default function UploadExpenseDialog({ isOpen, onOpenChange }: UploadExpe
       const expenseId = `exp-${Date.now()}`;
       
       // 3. Save the new expense record to Firestore
-      const expenseRef = doc(firestore, 'technicians', user.uid, 'expenses', expenseId);
+      const expenseRef = doc(firestore, 'technicians', mockUserId, 'expenses', expenseId);
       const newExpense = {
         id: expenseId,
         date: serverTimestamp(),
-        technicianId: user.uid,
+        technicianId: mockUserId,
         vendor: vendor,
         description: description,
         amount: parseFloat(amount.replace(/[^0-9.-]+/g, '')) || 0,

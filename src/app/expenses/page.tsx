@@ -22,15 +22,18 @@ import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   const expensesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
     return query(
-        collection(firestore, 'technicians', user.uid, 'expenses'),
+        collection(firestore, 'technicians', mockUserId, 'expenses'),
         orderBy('date', 'desc')
     );
-  }, [firestore, user]);
+  }, [firestore]);
 
   const { data: expenses, isLoading } = useCollection<Expense>(expensesQuery);
 

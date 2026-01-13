@@ -10,18 +10,21 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function JobsPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   const todosQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'technicians', user.uid, 'todos');
-  }, [firestore, user]);
+    if (!firestore) return null;
+    return collection(firestore, 'technicians', mockUserId, 'todos');
+  }, [firestore]);
   const { data: todos } = useCollection<Todo>(todosQuery);
   
   const calendarEventsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'technicians', user.uid, 'calendarEvents');
-  }, [firestore, user]);
+    if (!firestore) return null;
+    return collection(firestore, 'technicians', mockUserId, 'calendarEvents');
+  }, [firestore]);
   const { data: calendarEvents } = useCollection<CalendarEvent>(calendarEventsQuery);
 
 

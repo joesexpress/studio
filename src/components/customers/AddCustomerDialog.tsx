@@ -27,21 +27,13 @@ type AddCustomerDialogProps = {
 
 export default function AddCustomerDialog({ isOpen, onOpenChange }: AddCustomerDialogProps) {
   const { toast } = useToast();
-  const { user } = useFirebase();
   const [isSaving, setIsSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const [technicianId, setTechnicianId] = React.useState<string>('');
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user) {
-      toast({
-        title: 'Authentication Error',
-        description: 'You must be logged in to add a customer.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    
      if (!technicianId) {
       toast({
         title: 'Validation Error',

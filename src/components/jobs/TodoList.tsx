@@ -14,19 +14,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
   const [todos, setTodos] = React.useState(initialTodos);
   const [newTask, setNewTask] = React.useState('');
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   React.useEffect(() => {
     setTodos(initialTodos);
   }, [initialTodos]);
 
   const handleAddTask = () => {
-    if (!firestore || !user || !newTask.trim()) return;
+    if (!firestore || !newTask.trim()) return;
 
     const newTodo: Omit<Todo, 'id' | 'createdAt'> = {
       task: newTask.trim(),
       isCompleted: false,
-      technicianId: user.uid,
+      technicianId: mockUserId,
     };
     
     const todoWithTimestamp = {
@@ -34,20 +37,20 @@ export default function TodoList({ initialTodos }: { initialTodos: Todo[] }) {
         createdAt: serverTimestamp()
     }
 
-    const todosColRef = collection(firestore, 'technicians', user.uid, 'todos');
+    const todosColRef = collection(firestore, 'technicians', mockUserId, 'todos');
     addDocumentNonBlocking(todosColRef, todoWithTimestamp);
     setNewTask('');
   };
 
   const handleToggleTodo = (todo: Todo) => {
-    if (!firestore || !user) return;
-    const todoRef = doc(firestore, 'technicians', user.uid, 'todos', todo.id);
+    if (!firestore) return;
+    const todoRef = doc(firestore, 'technicians', mockUserId, 'todos', todo.id);
     setDocumentNonBlocking(todoRef, { isCompleted: !todo.isCompleted }, { merge: true });
   };
 
   const handleDeleteTodo = (todoId: string) => {
-    if (!firestore || !user) return;
-    const todoRef = doc(firestore, 'technicians', user.uid, 'todos', todoId);
+    if (!firestore) return;
+    const todoRef = doc(firestore, 'technicians', mockUserId, 'todos', todoId);
     deleteDocumentNonBlocking(todoRef);
   };
   

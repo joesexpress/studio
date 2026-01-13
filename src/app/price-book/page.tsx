@@ -21,14 +21,17 @@ import { collection } from 'firebase/firestore';
 
 export default function PriceBookPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   // The price book is now an external link, so we may not need to query for entries.
   // Keeping this here in case you want to revert or have a hybrid approach.
   const priceBookQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return collection(firestore, 'technicians', user.uid, 'priceBookEntries');
-  }, [firestore, user]);
+    if (!firestore) return null;
+    return collection(firestore, 'technicians', mockUserId, 'priceBookEntries');
+  }, [firestore]);
   
   const { data: priceBookEntries, isLoading } = useCollection<PriceBookEntry>(priceBookQuery);
 

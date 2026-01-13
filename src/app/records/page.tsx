@@ -5,16 +5,19 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function RecordsPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   const serviceRecordsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // Query to get all service records for the current technician
+    if (!firestore) return null;
+    // Query to get all service records for the default technician
     return query(
-        collection(firestore, 'technicians', user.uid, 'serviceRecords'),
+        collection(firestore, 'technicians', mockUserId, 'serviceRecords'),
         orderBy('date', 'desc')
     );
-  }, [firestore, user]);
+  }, [firestore]);
 
   const { data: initialRecords, isLoading } = useCollection(serviceRecordsQuery);
 

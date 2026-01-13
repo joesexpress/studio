@@ -3,30 +3,15 @@
 import React, { useMemo, type ReactNode, useEffect } from 'react';
 import { FirebaseProvider, useFirebase } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import Cookies from 'js-cookie';
 
 function AuthHandler({ children }: { children: ReactNode }) {
-  const { user } = useFirebase();
-
-  useEffect(() => {
-    // This effect now manages a cookie based on the user's authentication state.
-    // The middleware uses this cookie to protect routes.
-    if (user) {
-      // User is logged in, set a cookie.
-      // You might want to use the user's ID token for a more secure approach.
-      Cookies.set('userToken', 'true', { expires: 1 }); // Expires in 1 day
-    } else {
-      // User is logged out, remove the cookie.
-      Cookies.remove('userToken');
-    }
-  }, [user]);
-
+  // This component is now a pass-through as auth state is not managed on the client.
   return <>{children}</>;
 }
 
 
 interface FirebaseClientProviderProps {
-  children: React.Node;
+  children: React.ReactNode;
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {

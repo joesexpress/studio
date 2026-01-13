@@ -34,7 +34,7 @@ type AddQuoteDialogProps = {
 
 export default function AddQuoteDialog({ isOpen, onOpenChange }: AddQuoteDialogProps) {
   const { toast } = useToast();
-  const { user, firestore } = useFirebase();
+  const { firestore } = useFirebase();
   const [isSaving, setIsSaving] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   
@@ -53,6 +53,9 @@ export default function AddQuoteDialog({ isOpen, onOpenChange }: AddQuoteDialogP
   const [laborRequired, setLaborRequired] = React.useState('');
   const [materialsNeeded, setMaterialsNeeded] = React.useState('');
   const [status, setStatus] = React.useState<QuoteStatus>('Draft');
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
   
   const customersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -84,8 +87,8 @@ export default function AddQuoteDialog({ isOpen, onOpenChange }: AddQuoteDialogP
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!user || !firestore) {
-      toast({ title: 'Authentication Error', variant: 'destructive' });
+    if (!firestore) {
+      toast({ title: 'Firestore not available', variant: 'destructive' });
       return;
     }
     
@@ -148,7 +151,7 @@ export default function AddQuoteDialog({ isOpen, onOpenChange }: AddQuoteDialogP
             materialsNeeded,
             status,
             createdAt: serverTimestamp(),
-            technicianId: user.uid,
+            technicianId: mockUserId,
         };
 
         const quotesColRef = collection(firestore, 'quotes');

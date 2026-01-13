@@ -26,10 +26,12 @@ type UploadRecordDialogProps = {
 
 export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded }: UploadRecordDialogProps) {
   const { toast } = useToast();
-  const { user } = useFirebase();
   const [isUploading, setIsUploading] = React.useState(false);
   const [selectedFiles, setSelectedFiles] = React.useState<File[] | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -56,15 +58,7 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
       });
       return;
     }
-    if (!user) {
-        toast({
-            title: 'Not Authenticated',
-            description: 'You must be signed in to upload a record.',
-            variant: 'destructive',
-        });
-        return;
-    }
-
+    
     setIsUploading(true);
     
     toast({
@@ -81,7 +75,7 @@ export default function UploadRecordDialog({ isOpen, onOpenChange, onRecordAdded
                 const fileDataUri = reader.result as string;
                 const formData = new FormData();
                 formData.append('file', fileDataUri);
-                formData.append('technicianId', user.uid);
+                formData.append('technicianId', mockUserId);
                 
                 const result = await processServiceRecord(formData);
           

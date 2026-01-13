@@ -16,7 +16,10 @@ export default function JobCalendar({ initialEvents }: { initialEvents: Calendar
   const [events, setEvents] = React.useState(initialEvents);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
-  const { firestore, user } = useFirebase();
+  const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
   
   React.useEffect(() => {
     setEvents(initialEvents);
@@ -28,17 +31,17 @@ export default function JobCalendar({ initialEvents }: { initialEvents: Calendar
   };
 
   const handleAddEvent = (title: string, description: string) => {
-    if (!firestore || !user || !selectedDate) return;
+    if (!firestore || !selectedDate) return;
     
     const newEvent = {
         title,
         description,
         start: selectedDate,
         end: moment(selectedDate).add(1, 'hour').toDate(), // Default to 1 hour event
-        technicianId: user.uid,
+        technicianId: mockUserId,
     };
     
-    const calendarEventsColRef = collection(firestore, 'technicians', user.uid, 'calendarEvents');
+    const calendarEventsColRef = collection(firestore, 'technicians', mockUserId, 'calendarEvents');
     addDocumentNonBlocking(calendarEventsColRef, newEvent);
 
     setIsDialogOpen(false);
