@@ -115,7 +115,9 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
       const techMatch = log.technicianId === selectedTechnician;
       if (!techMatch) return false;
       if (!dateRange?.from) return true;
-      const logDate = typeof log.timeIn === 'string' ? new Date(log.timeIn) : (log.timeIn as any).toDate();
+      const logDate = log.timeIn && typeof (log.timeIn as any).toDate === 'function' 
+        ? (log.timeIn as any).toDate()
+        : new Date(log.timeIn as any);
       return isWithinInterval(logDate, { start: dateRange.from, end: dateRange.to || new Date(dateRange.from.getTime() + 24 * 60 * 60 * 1000 -1) });
     });
   }, [timeLogs, selectedTechnician, dateRange]);
