@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Customer, ServiceRecord } from '@/lib/types';
@@ -18,39 +17,31 @@ export default function CustomersPage() {
       if (!firestore || !user) return;
       setIsLoading(true);
       try {
-        // 1. Fetch all customers and all service records concurrently
+        // 1. Fetch all customers
         const customersQuery = query(collection(firestore, 'customers'));
-        const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
-
-        const [customerSnapshot, recordsSnapshot] = await Promise.all([
-          getDocs(customersQuery),
-          getDocs(recordsQuery),
-        ]);
-
+        const customerSnapshot = await getDocs(customersQuery);
         const customerList = customerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-        const allRecords = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-        
-        // 2. Create a map of customers by their ID for efficient lookup
-        const customerMap = new Map<string, Customer>(customerList.map(c => [c.id, { ...c, records: [], totalJobs: 0, totalBilled: 0 }]));
 
-        // 3. Associate records with their customers
-        allRecords.forEach(record => {
-            const customer = customerMap.get(record.customerId);
-            if (customer) {
-                customer.records.push(record);
-            }
-        });
-
-        // 4. Calculate totalJobs and totalBilled for each customer
-        customerMap.forEach(customer => {
-            customer.totalJobs = customer.records.length;
-            customer.totalBilled = customer.records
+        // 2. Fetch all service records for each customer
+        const customersWithData = await Promise.all(customerList.map(async (customer) => {
+            const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
+            const recordsSnapshot = await getDocs(recordsRef);
+            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            
+            const totalJobs = records.length;
+            const totalBilled = records
                 .filter(r => r.status === 'Paid' || r.status === 'Owed')
                 .reduce((sum, r) => sum + (r.total || 0), 0);
-        });
+
+            return {
+                ...customer,
+                records,
+                totalJobs,
+                totalBilled
+            };
+        }));
         
-        // 5. Convert map back to an array and sort
-        const customersWithData = Array.from(customerMap.values());
+        // 3. Sort and set the final state
         setCustomers(customersWithData.sort((a,b) => b.totalJobs - a.totalJobs));
 
       } catch (error) {
