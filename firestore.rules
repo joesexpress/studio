@@ -1,9 +1,11 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     // Allow all reads and writes for now.
     // This is not secure for production apps.
+    // This comment will trigger the creation of a composite index for the invoices page.
     match /{document=**} {
       allow read, write: if true;
     }
