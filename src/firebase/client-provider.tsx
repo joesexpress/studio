@@ -1,32 +1,25 @@
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect, useState } from 'react';
-import { FirebaseProvider, useFirebase } from '@/firebase/provider';
-import { initializeFirebase, initiateAnonymousSignIn } from '@/firebase';
+import { FirebaseProvider } from '@/firebase/provider';
+import { initializeFirebase, initiateAnonymousSignIn, useFirebase } from '@/firebase';
 
-function AuthHandler({ children, onAuthReady }: { children: ReactNode, onAuthReady: (isReady: boolean) => void }) {
-  const { auth, user, isUserLoading } = useFirebase();
+function AuthHandler({ children }: { children: React.ReactNode }) {
+  const { auth, isUserLoading, user, isAuthReady } = useFirebase();
 
   useEffect(() => {
-    // When the initial user check is complete, we know the auth state is resolved.
-    if (!isUserLoading) {
-      if (!user && auth) {
-        // If no user, sign in anonymously. The onAuthStateChanged listener
-        // in FirebaseProvider will pick up the new user state.
-        initiateAnonymousSignIn(auth);
-      } else {
-        // If there's already a user (or no auth instance), auth is "ready".
-        onAuthReady(true);
-      }
+    // This effect ensures that if we are past the initial user loading phase
+    // and there is still no user, we initiate the anonymous sign in.
+    // The onAuthStateChanged listener in the provider will then pick up the new user.
+    if (!isUserLoading && !user && auth) {
+      initiateAnonymousSignIn(auth);
     }
-  }, [isUserLoading, user, auth, onAuthReady]);
+  }, [isUserLoading, user, auth]);
 
-  // When the user object becomes available after loading, it means auth is ready.
-  useEffect(() => {
-    if (user) {
-      onAuthReady(true);
-    }
-  }, [user, onAuthReady]);
+  // Render children only when auth state is fully resolved.
+  if (!isAuthReady) {
+    return null; // Or a global loading spinner
+  }
 
   return <>{children}</>;
 }
@@ -37,27 +30,20 @@ interface FirebaseClientProviderProps {
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const [isAuthReady, setIsAuthReady] = useState(false);
 
   const firebaseServices = useMemo(() => {
     // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
-  }, []); // Empty dependency array ensures this runs only once on mount
-
-  const providerValue = useMemo(() => ({
-    ...firebaseServices,
-    isAuthReady
-  }), [firebaseServices, isAuthReady]);
+  }, []);
 
   return (
     <FirebaseProvider
-      firebaseApp={providerValue.firebaseApp}
-      auth={providerValue.auth}
-      firestore={providerValue.firestore}
-      storage={providerValue.storage}
-      isAuthReady={isAuthReady}
+      firebaseApp={firebaseServices.firebaseApp}
+      auth={firebaseServices.auth}
+      firestore={firebaseServices.firestore}
+      storage={firebaseServices.storage}
     >
-      <AuthHandler onAuthReady={setIsAuthReady}>
+      <AuthHandler>
         {children}
       </AuthHandler>
     </FirebaseProvider>
