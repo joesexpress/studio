@@ -2,19 +2,20 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import type { TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, ServiceRecord } from '@/lib/types';
+import type { TechnicianPerformance, RevenueDataPoint, ServiceRecordStatus, ServiceRecord, Customer } from '@/lib/types';
 import DashboardClient from '@/components/dashboard/DashboardClient';
 import DashboardFilters from '@/components/dashboard/DashboardFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Wrench } from 'lucide-react';
-import { format, isWithinInterval } from 'date-fns';
+import { DollarSign, Users, Wrench, UserMinus, UserCheck } from 'lucide-react';
+import { format, isWithinInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { useFirebase } from '@/firebase';
-import { collectionGroup, getDocs, query } from 'firebase/firestore';
+import { collectionGroup, getDocs, query, collection } from 'firebase/firestore';
 
 
 function useDashboardData(
   serviceRecords: ServiceRecord[] | null,
+  allCustomers: Customer[] | null,
   filters: { dateRange: DateRange | undefined, technician: string, status: string }
 ) {
   return useMemo(() => {
@@ -27,6 +28,8 @@ function useDashboardData(
         totalCustomers: 0,
         totalJobs: 0,
         uniqueTechnicians: [],
+        inactiveCustomers: 0,
+        totalCustomerCount: 0,
       };
     }
     
@@ -42,6 +45,29 @@ function useDashboardData(
       return dateMatch && techMatch && statusMatch;
     });
 
+    // --- Global Metrics (unfiltered) ---
+    const totalCustomerCount = allCustomers?.length || 0;
+    let inactiveCustomers = 0;
+    if (allCustomers && serviceRecords) {
+        const cutoffDate = subDays(new Date(), 180);
+        const customerLastService: { [key: string]: Date } = {};
+
+        serviceRecords.forEach(record => {
+            const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
+            if (!customerLastService[record.customerId] || recordDate > customerLastService[record.customerId]) {
+                customerLastService[record.customerId] = recordDate;
+            }
+        });
+
+        allCustomers.forEach(customer => {
+            const lastService = customerLastService[customer.id];
+            if (!lastService || lastService < cutoffDate) {
+                inactiveCustomers++;
+            }
+        });
+    }
+
+    // --- Filtered Metrics ---
     const technicians: { [key: string]: TechnicianPerformance } = {};
     const revenueByMonth: { [key: string]: number } = {};
     const statusCounts: { [key in ServiceRecordStatus]?: number } = {};
@@ -91,8 +117,18 @@ function useDashboardData(
     
     const totalCustomers = new Set(filteredRecords.map(r => r.customer)).size;
 
-    return { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs: filteredRecords.length, uniqueTechnicians };
-  }, [serviceRecords, filters]);
+    return { 
+        technicianPerformance, 
+        revenueData, 
+        statusData, 
+        totalRevenue, 
+        totalCustomers, 
+        totalJobs: filteredRecords.length, 
+        uniqueTechnicians,
+        inactiveCustomers,
+        totalCustomerCount,
+    };
+  }, [serviceRecords, allCustomers, filters]);
 }
 
 export default function DashboardPage() {
@@ -104,28 +140,49 @@ export default function DashboardPage() {
 
   const { firestore } = useFirebase();
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
+  const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAllRecords = async () => {
+    const fetchAllData = async () => {
         if (!firestore) return;
         setIsLoading(true);
         try {
             const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
-            const snapshot = await getDocs(recordsQuery);
-            const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            const customersQuery = query(collection(firestore, 'customers'));
+
+            const [recordsSnapshot, customersSnapshot] = await Promise.all([
+                getDocs(recordsQuery),
+                getDocs(customersQuery),
+            ]);
+
+            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+            
             setServiceRecords(records);
+            setAllCustomers(customers);
+
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         } finally {
             setIsLoading(false);
         }
     }
-    fetchAllRecords();
+    fetchAllData();
   }, [firestore]);
 
 
-  const { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs, uniqueTechnicians } = useDashboardData(serviceRecords, filters);
+  const { 
+    technicianPerformance, 
+    revenueData, 
+    statusData, 
+    totalRevenue, 
+    totalCustomers, 
+    totalJobs, 
+    uniqueTechnicians,
+    inactiveCustomers,
+    totalCustomerCount
+} = useDashboardData(serviceRecords, allCustomers, filters);
 
   if (isLoading) {
     return <div>Loading dashboard data...</div>
@@ -136,17 +193,31 @@ export default function DashboardPage() {
        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Analytics for your service records.</p>
+          <p className="text-muted-foreground">Analytics for your service business.</p>
         </div>
       </div>
 
-      <DashboardFilters 
-        filters={filters}
-        onFiltersChange={setFilters}
-        technicians={uniqueTechnicians}
-      />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+         <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCustomerCount}</div>
+            <p className="text-xs text-muted-foreground">All-time total registered customers.</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive Customers</CardTitle>
+            <UserMinus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{inactiveCustomers}</div>
+            <p className="text-xs text-muted-foreground">Not serviced in last 180 days.</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Billed Revenue</CardTitle>
@@ -169,17 +240,14 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unique Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+{totalCustomers}</div>
-            <p className="text-xs text-muted-foreground">Based on selected filters</p>
-          </CardContent>
-        </Card>
       </div>
+
+      <DashboardFilters 
+        filters={filters}
+        onFiltersChange={setFilters}
+        technicians={uniqueTechnicians}
+      />
+
       <DashboardClient 
         technicianPerformance={technicianPerformance}
         revenueData={revenueData}
