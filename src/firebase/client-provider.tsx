@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
-import { FirebaseProvider } from '@/firebase/provider';
+import { FirebaseProvider, useFirebase } from '@/firebase/provider';
 import { initializeFirebase, initiateAnonymousSignIn } from '@/firebase';
 
 function AuthHandler({ children }: { children: ReactNode }) {
