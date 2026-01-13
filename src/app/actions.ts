@@ -9,6 +9,7 @@ import { initializeFirebase, addDocumentNonBlocking, setDocumentNonBlocking } fr
 import type { ServiceRecord, Customer, Technician } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import Papa from 'papaparse';
 
 const fileSchema = z.object({
   fileUrl: z.string().url({ message: 'File must be a valid URL' }),
@@ -173,5 +174,94 @@ export async function addCustomerAndJob(formData: FormData) {
   } catch (error) {
     console.error("Error creating customer and job:", error);
     return { success: false, error: "Failed to save new customer and job." };
+  }
+}
+
+export async function processCsvImport(formData: FormData) {
+  const fileContent = formData.get('fileContent') as string;
+
+  if (!fileContent) {
+    return { success: false, error: "No file content received." };
+  }
+
+  try {
+    const parsedData = Papa.parse(fileContent, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    if (parsedData.errors.length > 0) {
+      console.error('CSV Parsing errors:', parsedData.errors);
+      return { success: false, error: `CSV parsing error: ${parsedData.errors[0].message}` };
+    }
+
+    const records: any[] = parsedData.data;
+    const { firestore } = initializeFirebase();
+    let processedCount = 0;
+
+    for (const record of records) {
+      const customerName = record.Customer || 'N/A';
+      if (customerName === 'N/A') continue;
+
+      const techName = record.Tech || 'N/A';
+      const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
+      const technicianId = technician?.id || 'tbd';
+
+      const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+      const recordId = `rec-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
+      const recordDate = record.Date ? new Date(record.Date) : new Date();
+
+      const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
+        id: recordId,
+        customer: customerName,
+        technician: techName,
+        date: recordDate,
+        summary: record['Full Description of Work']?.substring(0, 100) + '...' || 'Imported from CSV.',
+        address: record.Address || 'N/A',
+        phone: record.Phone || 'N/A',
+        model: record.Model || 'N/A',
+        serial: record.Serial || 'N/A',
+        filterSize: record['Filter Size'] || 'N/A',
+        freonType: record.Freon || 'N/A',
+        laborHours: record['Total Hours'] || 'N/A',
+        breakdown: record.Breakdown || 'N/A',
+        description: record['Full Description of Work'] || 'N/A',
+        total: total,
+        fileUrl: record['File Link'] || '#',
+        technicianId: technicianId,
+        customerId: customerId,
+        status: (record.Status as any) || 'N/A'
+      };
+
+      // Save to technician's subcollection
+      const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
+      setDocumentNonBlocking(techRecordRef, newRecord, {});
+
+      // Save to customer's subcollection
+      const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
+      setDocumentNonBlocking(customerRecordRef, newRecord, {});
+
+      // Also save/update the main customer profile
+      const customerDocRef = doc(firestore, 'customers', customerId);
+      setDocumentNonBlocking(customerDocRef, {
+        id: customerId,
+        name: customerName,
+        address: record.Address || 'N/A',
+        phone: record.Phone || 'N/A',
+      }, { merge: true });
+      
+      processedCount++;
+    }
+
+    revalidatePath("/records");
+    revalidatePath("/customers");
+    revalidatePath("/dashboard");
+
+    return { success: true, count: processedCount };
+  } catch (error) {
+    console.error("Error processing CSV file:", error);
+    return { success: false, error: "An unexpected error occurred while processing the CSV." };
   }
 }

@@ -23,9 +23,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from './RecordDetailsSheet';
 import UploadRecordDialog from './UploadRecordDialog';
-import { PlusCircle, ListFilter } from 'lucide-react';
+import { PlusCircle, ListFilter, FileUp } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { format } from 'date-fns';
+import ImportCsvDialog from './ImportCsvDialog';
 
 type RecordsPageClientProps = {
   initialRecords: ServiceRecord[];
@@ -55,6 +56,7 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
 
   React.useEffect(() => {
     setRecords(initialRecords);
@@ -129,6 +131,10 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+           <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
+            <FileUp className="mr-2 h-4 w-4" />
+            Import from CSV
+          </Button>
           <Button size="sm" onClick={() => setIsUploadOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Record
@@ -200,6 +206,10 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
         isOpen={isUploadOpen}
         onOpenChange={setIsUploadOpen}
         onRecordAdded={handleAddNewRecord}
+      />
+      <ImportCsvDialog
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
       />
     </>
   );
