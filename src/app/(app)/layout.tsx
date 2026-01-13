@@ -11,7 +11,16 @@ import {
   SidebarInset,
   SidebarFooter,
 } from '@/components/ui/sidebar';
-import { AppWindow, BarChart3, Settings, Users, CalendarCheck, FileText, Book } from 'lucide-react';
+import {
+  AppWindow,
+  BarChart3,
+  Settings,
+  Users,
+  CalendarCheck,
+  FileText,
+  Book,
+  ClipboardPen,
+} from 'lucide-react';
 import MainHeader from '@/components/main-header';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getPlaceholderImage } from '@/lib/placeholder-data';
@@ -20,7 +29,8 @@ import { FirebaseClientProvider } from '@/firebase';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const userAvatar = getPlaceholderImage('user-avatar');
-  const logoUrl = "https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png";
+  const logoUrl =
+    'https://storage.googleapis.com/project-os-prod-public/a6198642-8872-4665-9114-15c99d21d51a.png';
 
   return (
     <FirebaseClientProvider>
@@ -64,7 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-               <SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Invoices">
                   <Link href="/invoices">
                     <FileText />
@@ -77,6 +87,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Link href="/jobs">
                     <CalendarCheck />
                     <span>Jobs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Expenses">
+                  <Link href="/expenses">
+                    <ClipboardPen />
+                    <span>Expenses</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -112,14 +130,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 backgroundImage: `url(${logoUrl})`,
               }}
             />
-            <div className="relative z-10">
-              {children}
-            </div>
+            <div className="relative z-10">{children}</div>
           </main>
         </SidebarInset>
       </SidebarProvider>
     </FirebaseClientProvider>
   );
 }
-
-    
