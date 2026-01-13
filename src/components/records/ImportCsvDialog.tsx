@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Papa from 'papaparse';
 import { useFirebase } from '@/firebase';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import { doc, collection, getDocs, query, where, limit, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDocs, query, collection, setDoc } from 'firebase/firestore';
 import type { ServiceRecord, Customer } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 
@@ -111,7 +111,8 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
                 phone: record.Phone || 'N/A',
             };
             const customerDocRef = doc(firestore, 'customers', newCustomerId);
-            writePromises.push(setDoc(customerDocRef, newCustomerData, { merge: true }));
+            // CRITICAL: Await this write to ensure customer exists before adding subcollection docs.
+            await setDoc(customerDocRef, newCustomerData, { merge: true });
             customer = newCustomerData as Customer;
             customerCache.set(normalizedCustomerName, customer);
             customerId = newCustomerId;
@@ -162,7 +163,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
           status: (record.Status as any) || 'N/A'
         };
   
-        // Add write operation to the list
+        // Add service record write to the batch
         const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
         writePromises.push(setDoc(customerRecordRef, newRecord, { merge: true }));
         
@@ -170,7 +171,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         setProgress((processedCount / totalRecords) * 100);
       }
 
-      // Execute all writes in parallel
+      // Execute all service record writes in parallel
       await Promise.all(writePromises);
       
       toast({
