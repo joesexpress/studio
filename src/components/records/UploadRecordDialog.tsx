@@ -18,10 +18,11 @@ import type { ServiceRecord } from '@/lib/types';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 import { extractDataFromServiceRecord } from '@/ai/flows/extract-data-from-service-records';
 import { summarizeServiceRecord } from '@/ai/flows/summarize-service-records';
+
 
 type UploadRecordDialogProps = {
   isOpen: boolean;
