@@ -23,20 +23,23 @@ export default function TimeClockPage() {
         const logs: TimeLog[] = [];
         const techIds = MOCK_TECHNICIANS.map(t => t.id);
         
-        // This is not ideal for real-time, but for this app it's fine for page load.
-        // A better approach might be a collection group query if rules allow.
-        for (const id of techIds) {
-            const logsRef = collection(firestore, 'technicians', id, 'timeLogs');
-            try {
+        try {
+          for (const id of techIds) {
+              if (!id) continue; // Skip if id is invalid
+              const logsRef = collection(firestore, 'technicians', id, 'timeLogs');
               const snapshot = await getDocs(logsRef);
               snapshot.forEach((doc: any) => logs.push({ id: doc.id, ...doc.data() } as TimeLog));
-            } catch(e) {
-              // This can happen if the subcollection doesn't exist yet, which is fine.
-              console.log(`No timeLogs for technician ${id} or permission error.`);
-            }
+          }
+          setAllTimeLogs(logs.sort((a,b) => {
+            const timeA = a.timeIn ? (a.timeIn as any).toDate().getTime() : 0;
+            const timeB = b.timeIn ? (b.timeIn as any).toDate().getTime() : 0;
+            return timeB - timeA;
+          }));
+        } catch(e) {
+            console.error("Error fetching time logs:", e);
+        } finally {
+            setIsLoading(false);
         }
-        setAllTimeLogs(logs.sort((a,b) => (b.timeIn as any).toDate() - (a.timeIn as any).toDate()));
-        setIsLoading(false);
     };
 
     fetchLogs();

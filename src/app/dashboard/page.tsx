@@ -51,11 +51,13 @@ function useDashboardData(
       const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
 
       // Technician Performance
-      if (!technicians[record.technician]) {
-        technicians[record.technician] = { technician: record.technician, totalJobs: 0, totalRevenue: 0 };
+      if (record.technician) {
+        if (!technicians[record.technician]) {
+            technicians[record.technician] = { technician: record.technician, totalJobs: 0, totalRevenue: 0 };
+        }
+        technicians[record.technician].totalJobs += 1;
+        technicians[record.technician].totalRevenue += record.total;
       }
-      technicians[record.technician].totalJobs += 1;
-      technicians[record.technician].totalRevenue += record.total;
 
       // Revenue over time
       if (record.status === 'Paid') {
@@ -83,7 +85,7 @@ function useDashboardData(
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const statusData = Object.entries(statusCounts).map(([status, count]) => ({
-      name: status,
+      name: status as string,
       value: count!,
     }));
     
@@ -108,11 +110,16 @@ export default function DashboardPage() {
     const fetchAllRecords = async () => {
         if (!firestore) return;
         setIsLoading(true);
-        const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
-        const snapshot = await getDocs(recordsQuery);
-        const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-        setServiceRecords(records);
-        setIsLoading(false);
+        try {
+            const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
+            const snapshot = await getDocs(recordsQuery);
+            const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            setServiceRecords(records);
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setIsLoading(false);
+        }
     }
     fetchAllRecords();
   }, [firestore]);

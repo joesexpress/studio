@@ -16,33 +16,39 @@ export default function CustomersPage() {
     const fetchCustomersAndRecords = async () => {
       if (!firestore) return;
       setIsLoading(true);
-      const customersColRef = collection(firestore, 'customers');
-      const customerSnapshot = await getDocs(customersColRef);
-      
-      const customersData: Customer[] = [];
+      try {
+        const customersColRef = collection(firestore, 'customers');
+        const customerSnapshot = await getDocs(customersColRef);
+        
+        const customersData: Customer[] = [];
 
-      for (const customerDoc of customerSnapshot.docs) {
-          const customer = { id: customerDoc.id, ...customerDoc.data() } as Omit<Customer, 'records'|'totalJobs'|'totalBilled'>;
-          
-          const recordsColRef = collection(firestore, 'customers', customerDoc.id, 'serviceRecords');
-          const recordsQuery = query(recordsColRef, orderBy('date', 'desc'));
-          const recordsSnapshot = await getDocs(recordsQuery);
-          
-          const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-          
-          const totalBilled = records
-            .filter(r => r.status === 'Paid' || r.status === 'Owed')
-            .reduce((sum, r) => sum + r.total, 0);
+        for (const customerDoc of customerSnapshot.docs) {
+            const customer = { id: customerDoc.id, ...customerDoc.data() } as Omit<Customer, 'records'|'totalJobs'|'totalBilled'>;
+            
+            const recordsColRef = collection(firestore, 'customers', customerDoc.id, 'serviceRecords');
+            const recordsQuery = query(recordsColRef, orderBy('date', 'desc'));
+            const recordsSnapshot = await getDocs(recordsQuery);
+            
+            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            
+            const totalBilled = records
+              .filter(r => r.status === 'Paid' || r.status === 'Owed')
+              .reduce((sum, r) => sum + r.total, 0);
 
-          customersData.push({
-              ...customer,
-              records,
-              totalJobs: records.length,
-              totalBilled,
-          });
+            customersData.push({
+                ...customer,
+                records,
+                totalJobs: records.length,
+                totalBilled,
+            });
+        }
+        setCustomers(customersData.sort((a,b) => b.totalJobs - a.totalJobs));
+      } catch (error) {
+        console.error("Failed to fetch customer data:", error);
+        // Optionally, set an error state to show in the UI
+      } finally {
+        setIsLoading(false);
       }
-      setCustomers(customersData.sort((a,b) => b.totalJobs - a.totalJobs));
-      setIsLoading(false);
     };
 
     fetchCustomersAndRecords();
