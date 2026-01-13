@@ -149,19 +149,22 @@ export default function DashboardPage() {
         if (!firestore || !user) return;
         setIsDataLoading(true);
         try {
-            const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
+            // Fetch all customers first
             const customersQuery = query(collection(firestore, 'customers'));
-
-            const [recordsSnapshot, customersSnapshot] = await Promise.all([
-                getDocs(recordsQuery),
-                getDocs(customersQuery),
-            ]);
-
-            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            const customersSnapshot = await getDocs(customersQuery);
             const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-            
-            setServiceRecords(records);
             setAllCustomers(customers);
+
+            // Then fetch all service records from each customer's subcollection
+            const allRecords: ServiceRecord[] = [];
+            for (const customer of customers) {
+                const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
+                const recordsSnapshot = await getDocs(recordsRef);
+                recordsSnapshot.forEach(doc => {
+                    allRecords.push({ id: doc.id, ...doc.data() } as ServiceRecord);
+                });
+            }
+            setServiceRecords(allRecords);
 
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
@@ -174,6 +177,8 @@ export default function DashboardPage() {
         fetchAllData();
     } else if (!isAuthLoading && !user) {
         setIsDataLoading(false);
+        setServiceRecords([]);
+        setAllCustomers([]);
     }
   }, [firestore, user, isAuthLoading]);
 

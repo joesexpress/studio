@@ -4,7 +4,7 @@
 import type { Customer, ServiceRecord } from '@/lib/types';
 import CustomersClient from '@/components/customers/CustomersClient';
 import { useFirebase, useUser } from '@/firebase';
-import { collection, getDocs, query, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 export default function CustomersPage() {
@@ -18,30 +18,17 @@ export default function CustomersPage() {
       if (!firestore || !user) return;
       setIsLoading(true);
       try {
-        // 1. Fetch all customers and all service records in parallel
+        // 1. Fetch all customers
         const customersQuery = query(collection(firestore, 'customers'));
-        const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
-
-        const [customerSnapshot, recordsSnapshot] = await Promise.all([
-            getDocs(customersQuery),
-            getDocs(recordsQuery)
-        ]);
-
+        const customerSnapshot = await getDocs(customersQuery);
         const customerList = customerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
-        const recordList = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
         
-        // 2. Create a map of records by customerId for efficient lookup
-        const recordsByCustomer = new Map<string, ServiceRecord[]>();
-        for (const record of recordList) {
-            if (!recordsByCustomer.has(record.customerId)) {
-                recordsByCustomer.set(record.customerId, []);
-            }
-            recordsByCustomer.get(record.customerId)!.push(record);
-        }
-
-        // 3. Combine customers with their records and calculate aggregates
-        const customersData: Customer[] = customerList.map(customer => {
-            const records = recordsByCustomer.get(customer.id) || [];
+        // 2. Fetch all service records for each customer
+        const customersWithData = await Promise.all(customerList.map(async (customer) => {
+            const recordsRef = collection(firestore, 'customers', customer.id, 'serviceRecords');
+            const recordsSnapshot = await getDocs(recordsRef);
+            const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            
             const totalBilled = records
               .filter(r => r.status === 'Paid' || r.status === 'Owed')
               .reduce((sum, r) => sum + r.total, 0);
@@ -52,25 +39,22 @@ export default function CustomersPage() {
                 totalJobs: records.length,
                 totalBilled,
             };
-        });
+        }));
         
-        setCustomers(customersData.sort((a,b) => b.totalJobs - a.totalJobs));
+        setCustomers(customersWithData.sort((a,b) => b.totalJobs - a.totalJobs));
 
       } catch (error) {
         console.error("Failed to fetch customer data:", error);
-        // Optionally, set an error state to show in the UI
       } finally {
         setIsLoading(false);
       }
     };
     
-    // Only fetch data if the user is loaded and authenticated
     if (!isUserLoading && user) {
         fetchCustomersAndRecords();
     } else if (!isUserLoading && !user) {
-        // Handle the case where there is no user after loading
         setIsLoading(false);
-        setCustomers([]); // Clear any old data
+        setCustomers([]);
     }
 
   }, [firestore, user, isUserLoading]);
