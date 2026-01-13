@@ -1,8 +1,7 @@
+
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
 import type { PriceBookEntry } from '@/lib/types';
 import {
   Table,
@@ -16,32 +15,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
-// We'll create this component next
+import { MOCK_PRICE_BOOK } from '@/lib/mock-data';
 // import UploadPriceBookDialog from './UploadPriceBookDialog';
 
 export default function PriceBookPage() {
-  const { firestore, user } = useFirebase();
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
 
-  const priceBookQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'technicians', user.uid, 'priceBookEntries'),
-      orderBy('uploadedAt', 'desc')
-    );
-  }, [firestore, user]);
-
-  const { data: priceBookEntries, isLoading } = useCollection<PriceBookEntry>(priceBookQuery);
+  // Using mock data instead of Firestore
+  const priceBookEntries = MOCK_PRICE_BOOK;
 
   const getEntryDate = (entry: PriceBookEntry) => {
     if (!entry.uploadedAt) return 'N/A';
-    const date = (entry.uploadedAt as any).toDate();
+    const date = new Date(entry.uploadedAt as any);
     return format(date, 'PPP p');
   };
-  
-  if (isLoading) {
-    return <div>Loading price book...</div>;
-  }
 
   return (
     <>
@@ -104,5 +91,3 @@ export default function PriceBookPage() {
     </>
   );
 }
-
-    

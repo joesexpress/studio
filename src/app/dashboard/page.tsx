@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -6,10 +7,9 @@ import DashboardClient from '@/components/dashboard/DashboardClient';
 import DashboardFilters from '@/components/dashboard/DashboardFilters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, Users, Wrench } from 'lucide-react';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import { format, parseISO, isWithinInterval } from 'date-fns';
+import { format, isWithinInterval } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { MOCK_RECORDS } from '@/lib/mock-data';
 
 function useDashboardData(
   serviceRecords: ServiceRecord[] | null,
@@ -31,7 +31,7 @@ function useDashboardData(
     const uniqueTechnicians = Array.from(new Set(serviceRecords.map(r => r.technician).filter(Boolean))).sort();
 
     const filteredRecords = serviceRecords.filter(record => {
-      const recordDate = record.date ? (record.date as any).toDate() : new Date();
+      const recordDate = new Date(record.date as string);
 
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
       const techMatch = !filters.technician || record.technician === filters.technician;
@@ -46,7 +46,7 @@ function useDashboardData(
     let totalRevenue = 0;
 
     filteredRecords.forEach(record => {
-      const recordDate = (record.date as any).toDate();
+      const recordDate = new Date(record.date as string);
 
       // Technician Performance
       if (!technicians[record.technician]) {
@@ -92,25 +92,17 @@ function useDashboardData(
 }
 
 export default function DashboardPage() {
-  const { firestore, user } = useFirebase();
   const [filters, setFilters] = useState({
     dateRange: undefined as DateRange | undefined,
     technician: '',
     status: '',
   });
 
-  const serviceRecordsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'technicians', user.uid, 'serviceRecords'));
-  }, [firestore, user]);
-
-  const { data: serviceRecords, isLoading } = useCollection<ServiceRecord>(serviceRecordsQuery);
+  // Using mock data instead of Firestore
+  const serviceRecords = MOCK_RECORDS;
 
   const { technicianPerformance, revenueData, statusData, totalRevenue, totalCustomers, totalJobs, uniqueTechnicians } = useDashboardData(serviceRecords, filters);
 
-  if (isLoading) {
-    return <div>Loading dashboard...</div>;
-  }
 
   return (
     <div className="flex flex-col gap-6">

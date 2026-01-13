@@ -1,8 +1,7 @@
+
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
 import type { Expense } from '@/lib/types';
 import {
   Table,
@@ -17,31 +16,20 @@ import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
 import UploadExpenseDialog from '@/components/expenses/UploadExpenseDialog';
+import { MOCK_EXPENSES } from '@/lib/mock-data';
 
 export default function ExpensesPage() {
-  const { firestore, user } = useFirebase();
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
 
-  const expensesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'technicians', user.uid, 'expenses'),
-      orderBy('date', 'desc')
-    );
-  }, [firestore, user]);
-
-  const { data: expenses, isLoading } = useCollection<Expense>(expensesQuery);
+  // Using mock data instead of Firestore
+  const expenses = MOCK_EXPENSES;
 
   const getEntryDate = (entry: Expense) => {
     if (!entry.date) return 'N/A';
-    const date = (entry.date as any).toDate();
+    const date = new Date(entry.date as string);
     return format(date, 'PPP');
   };
-
-  if (isLoading) {
-    return <div>Loading expenses...</div>;
-  }
-
+  
   const totalExpenses = React.useMemo(() => {
     if (!expenses) return 0;
     return expenses.reduce((sum, expense) => sum + expense.amount, 0);

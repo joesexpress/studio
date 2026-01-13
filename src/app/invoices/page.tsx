@@ -1,9 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
-import type { ServiceRecord, ServiceRecordStatus } from '@/lib/types';
+import type { ServiceRecord } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -16,23 +15,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import RecordDetailsSheet from '@/components/records/RecordDetailsSheet';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
+import { MOCK_RECORDS } from '@/lib/mock-data';
 
 export default function InvoicesPage() {
-  const { firestore, user } = useFirebase();
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
-  const invoicesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(
-      collection(firestore, 'technicians', user.uid, 'serviceRecords'),
-      where('status', '==', 'Owed'),
-      orderBy('date', 'desc')
-    );
-  }, [firestore, user]);
-
-  const { data: invoices, isLoading } = useCollection<ServiceRecord>(invoicesQuery);
+  // Using mock data instead of Firestore
+  const invoices = MOCK_RECORDS.filter(r => r.status === 'Owed');
   
   const handleViewDetails = (record: ServiceRecord) => {
     setSelectedRecord(record);
@@ -41,7 +31,7 @@ export default function InvoicesPage() {
 
   const getRecordDate = (record: ServiceRecord) => {
     if (!record.date) return 'N/A';
-    const date = (record.date as any).toDate();
+    const date = new Date(record.date as string);
     return format(date, 'P');
   };
 
@@ -49,10 +39,6 @@ export default function InvoicesPage() {
     if (!invoices) return 0;
     return invoices.reduce((sum, record) => sum + record.total, 0);
   }, [invoices]);
-
-  if (isLoading) {
-    return <div>Loading outstanding invoices...</div>;
-  }
 
   return (
     <>
