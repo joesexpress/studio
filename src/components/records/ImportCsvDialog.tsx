@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -85,7 +86,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
         const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
         const technicianId = technician?.id || 'tbd';
   
-        const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+        const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
         const recordId = `rec-${Date.now()}-${processedCount}`;
   
         const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
