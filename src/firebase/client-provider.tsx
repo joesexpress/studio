@@ -8,17 +8,17 @@ function AuthHandler({ children }: { children: React.ReactNode }) {
   const { auth, isUserLoading, user, isAuthReady } = useFirebase();
 
   useEffect(() => {
-    // This effect ensures that if we are past the initial user loading phase
-    // and there is still no user, we initiate the anonymous sign in.
-    // The onAuthStateChanged listener in the provider will then pick up the new user.
     if (!isUserLoading && !user && auth) {
       initiateAnonymousSignIn(auth);
     }
   }, [isUserLoading, user, auth]);
 
-  // Render children only when auth state is fully resolved.
   if (!isAuthReady) {
-    return null; // Or a global loading spinner
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p>Authenticating...</p>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -30,9 +30,7 @@ interface FirebaseClientProviderProps {
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-
   const firebaseServices = useMemo(() => {
-    // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
   }, []);
 
