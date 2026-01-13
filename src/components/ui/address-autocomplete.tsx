@@ -9,8 +9,8 @@ interface AddressAutocompleteProps {
   initialValue?: string;
 }
 
-const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({ onAddressSelect, initialValue = '' }) => {
-  const [inputValue, setInputValue] = React.useState(initialValue);
+const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({ onAddressSelect, initialValue }) => {
+  const [inputValue, setInputValue] = React.useState(initialValue || '');
   const inputRef = React.useRef<HTMLInputElement>(null);
   const autocompleteRef = React.useRef<google.maps.places.Autocomplete | null>(null);
 
@@ -40,7 +40,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({ onAddressSele
   };
   
   React.useEffect(() => {
-    setInputValue(initialValue);
+    setInputValue(initialValue || '');
   }, [initialValue]);
 
   if (!isScriptLoaded) {
