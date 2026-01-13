@@ -23,8 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from './RecordDetailsSheet';
-import UploadRecordDialog from './UploadRecordDialog';
-import { PlusCircle, ListFilter, FileUp, Download } from 'lucide-react';
+import { ListFilter, FileUp, Download } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { format } from 'date-fns';
 import ImportCsvDialog from './ImportCsvDialog';
@@ -56,7 +55,6 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
   const [statusFilter, setStatusFilter] = React.useState<ServiceRecordStatus[]>([]);
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
-  const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   const [isImportOpen, setIsImportOpen] = React.useState(false);
 
   const filteredRecords = React.useMemo(() => {
@@ -147,10 +145,6 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
             <Download className="mr-2 h-4 w-4" />
             Download Report
           </Button>
-          <Button size="sm" onClick={() => setIsUploadOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Record
-          </Button>
         </div>
       </div>
       
@@ -218,10 +212,6 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
         record={selectedRecord}
       />
 
-      <UploadRecordDialog
-        isOpen={isUploadOpen}
-        onOpenChange={setIsUploadOpen}
-      />
       <ImportCsvDialog
         isOpen={isImportOpen}
         onOpenChange={setIsImportOpen}
