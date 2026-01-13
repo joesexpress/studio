@@ -19,7 +19,7 @@ function useDashboardData(
   filters: { dateRange: DateRange | undefined, technician: string, status: string }
 ) {
   return useMemo(() => {
-    if (!serviceRecords) {
+    if (!serviceRecords || !allCustomers) {
       return {
         technicianPerformance: [],
         revenueData: [],
@@ -30,6 +30,7 @@ function useDashboardData(
         uniqueTechnicians: [],
         inactiveCustomers: 0,
         totalCustomerCount: 0,
+        isDataReady: false,
       };
     }
     
@@ -46,26 +47,24 @@ function useDashboardData(
     });
 
     // --- Global Metrics (unfiltered) ---
-    const totalCustomerCount = allCustomers?.length || 0;
+    const totalCustomerCount = allCustomers.length;
     let inactiveCustomers = 0;
-    if (allCustomers && serviceRecords) {
-        const cutoffDate = subDays(new Date(), 180);
-        const customerLastService: { [key: string]: Date } = {};
+    const cutoffDate = subDays(new Date(), 180);
+    const customerLastService: { [key: string]: Date } = {};
 
-        serviceRecords.forEach(record => {
-            const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
-            if (!customerLastService[record.customerId] || recordDate > customerLastService[record.customerId]) {
-                customerLastService[record.customerId] = recordDate;
-            }
-        });
+    serviceRecords.forEach(record => {
+        const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
+        if (!customerLastService[record.customerId] || recordDate > customerLastService[record.customerId]) {
+            customerLastService[record.customerId] = recordDate;
+        }
+    });
 
-        allCustomers.forEach(customer => {
-            const lastService = customerLastService[customer.id];
-            if (!lastService || lastService < cutoffDate) {
-                inactiveCustomers++;
-            }
-        });
-    }
+    allCustomers.forEach(customer => {
+        const lastService = customerLastService[customer.id];
+        if (!lastService || lastService < cutoffDate) {
+            inactiveCustomers++;
+        }
+    });
 
     // --- Filtered Metrics ---
     const technicians: { [key: string]: TechnicianPerformance } = {};
@@ -127,6 +126,7 @@ function useDashboardData(
         uniqueTechnicians,
         inactiveCustomers,
         totalCustomerCount,
+        isDataReady: true,
     };
   }, [serviceRecords, allCustomers, filters]);
 }
@@ -142,12 +142,12 @@ export default function DashboardPage() {
   const { user, isUserLoading: isAuthLoading } = useUser();
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[] | null>(null);
   const [allCustomers, setAllCustomers] = useState<Customer[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
         if (!firestore || !user) return;
-        setIsLoading(true);
+        setIsDataLoading(true);
         try {
             const recordsQuery = query(collectionGroup(firestore, 'serviceRecords'));
             const customersQuery = query(collection(firestore, 'customers'));
@@ -166,14 +166,14 @@ export default function DashboardPage() {
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         } finally {
-            setIsLoading(false);
+            setIsDataLoading(false);
         }
     }
     
     if (!isAuthLoading && user) {
         fetchAllData();
     } else if (!isAuthLoading && !user) {
-        setIsLoading(false);
+        setIsDataLoading(false);
     }
   }, [firestore, user, isAuthLoading]);
 
@@ -187,12 +187,11 @@ export default function DashboardPage() {
     totalJobs, 
     uniqueTechnicians,
     inactiveCustomers,
-    totalCustomerCount
+    totalCustomerCount,
+    isDataReady,
 } = useDashboardData(serviceRecords, allCustomers, filters);
 
-  if (isLoading || isAuthLoading) {
-    return <div>Loading dashboard data...</div>
-  }
+  const isLoading = isAuthLoading || isDataLoading;
 
   return (
     <div className="flex flex-col gap-6">
@@ -210,7 +209,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCustomerCount}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : totalCustomerCount}</div>
             <p className="text-xs text-muted-foreground">All-time total registered customers.</p>
           </CardContent>
         </Card>
@@ -220,7 +219,7 @@ export default function DashboardPage() {
             <UserMinus className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inactiveCustomers}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : inactiveCustomers}</div>
             <p className="text-xs text-muted-foreground">Not serviced in last 180 days.</p>
           </CardContent>
         </Card>
@@ -231,7 +230,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalRevenue)}
+              {isLoading ? '...' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
@@ -242,7 +241,7 @@ export default function DashboardPage() {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{totalJobs}</div>
+            <div className="text-2xl font-bold">+{isLoading ? '...' : totalJobs}</div>
             <p className="text-xs text-muted-foreground">Based on selected filters</p>
           </CardContent>
         </Card>
@@ -254,11 +253,19 @@ export default function DashboardPage() {
         technicians={uniqueTechnicians}
       />
 
-      <DashboardClient 
-        technicianPerformance={technicianPerformance}
-        revenueData={revenueData}
-        statusData={statusData}
-      />
+      {isLoading && (
+        <div className="text-center p-8">
+            <p>Loading dashboard data...</p>
+        </div>
+      )}
+
+      {!isLoading && isDataReady && (
+        <DashboardClient 
+            technicianPerformance={technicianPerformance}
+            revenueData={revenueData}
+            statusData={statusData}
+        />
+      )}
     </div>
   );
 }
