@@ -110,11 +110,6 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
         const recordsSnapshot = await getDocs(recordsRef);
         
         for (const recordDoc of recordsSnapshot.docs) {
-            const record = recordDoc.data() as ServiceRecord;
-            // Delete from technician's subcollection
-            const techRecordRef = doc(firestore, 'technicians', record.technicianId, 'serviceRecords', record.id);
-            deleteDocumentNonBlocking(techRecordRef);
-            // Delete from customer's subcollection
             deleteDocumentNonBlocking(recordDoc.ref);
         }
 

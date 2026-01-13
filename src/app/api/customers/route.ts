@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { initializeFirebase } from '@/firebase/server';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import type { Customer, ServiceRecord } from '@/lib/types';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
 
@@ -35,8 +35,7 @@ export async function POST(request: Request) {
       phone,
     };
 
-    const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
-      id: recordId,
+    const recordData: Omit<ServiceRecord, 'date' | 'id'> & { date: any } = {
       date: new Date(),
       technician: technician.name,
       customer: name,
@@ -57,18 +56,13 @@ export async function POST(request: Request) {
       customerId,
     };
 
-    // Use Promise.all to run writes concurrently
     const customerRef = doc(firestore, 'customers', customerId);
-    const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-    const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-    
-    await Promise.all([
-        setDoc(customerRef, customerData, { merge: true }),
-        setDoc(techRecordRef, recordData),
-        setDoc(customerRecordRef, recordData)
-    ]);
+    await setDoc(customerRef, customerData, { merge: true });
 
-    return NextResponse.json({ message: 'Customer and job created successfully', customerId, recordId }, { status: 201 });
+    const customerRecordRef = collection(firestore, 'customers', customerId, 'serviceRecords');
+    const newRecordRef = await addDoc(customerRecordRef, recordData);
+
+    return NextResponse.json({ message: 'Customer and job created successfully', customerId, recordId: newRecordRef.id }, { status: 201 });
 
   } catch (error) {
     console.error('Error creating customer and job:', error);

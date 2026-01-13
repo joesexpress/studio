@@ -112,11 +112,9 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
         recordToSave.total = parseFloat(recordToSave.total) || 0;
     }
 
-    const techRecordRef = doc(firestore, 'technicians', record.technicianId, 'serviceRecords', record.id);
     const customerRecordRef = doc(firestore, 'customers', record.customerId, 'serviceRecords', record.id);
     
     // Non-blocking updates
-    setDocumentNonBlocking(techRecordRef, recordToSave, { merge: true });
     setDocumentNonBlocking(customerRecordRef, recordToSave, { merge: true });
 
     toast({
@@ -133,10 +131,8 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
   const handleDelete = () => {
     if (!firestore || !record) return;
 
-    const techRecordRef = doc(firestore, 'technicians', record.technicianId, 'serviceRecords', record.id);
     const customerRecordRef = doc(firestore, 'customers', record.customerId, 'serviceRecords', record.id);
 
-    deleteDocumentNonBlocking(techRecordRef);
     deleteDocumentNonBlocking(customerRecordRef);
 
     toast({

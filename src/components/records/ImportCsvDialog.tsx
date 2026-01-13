@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -17,10 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import Papa from 'papaparse';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import { doc } from 'firebase/firestore';
-import type { ServiceRecord } from '@/lib/types';
+import { doc, collection, getDocs, query, where, limit } from 'firebase/firestore';
+import type { ServiceRecord, Customer } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
 
 
@@ -73,6 +72,9 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       const records: any[] = parsedData.data;
       const totalRecords = records.length;
       let processedCount = 0;
+
+      // Cache for existing customers to reduce Firestore reads
+      const customerCache = new Map<string, string>();
   
       for (const record of records) {
         const customerName = record.Customer || 'N/A';
@@ -81,12 +83,40 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             setProgress((processedCount / totalRecords) * 100);
             continue; // Skip rows without a customer name
         };
-  
+
         const techName = record.Tech || 'N/A';
         const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
         const technicianId = technician?.id || 'tbd';
+
+        let customerId = '';
+        const normalizedCustomerName = customerName.trim().toLowerCase();
+
+        // 1. Find or create customer
+        if (customerCache.has(normalizedCustomerName)) {
+            customerId = customerCache.get(normalizedCustomerName)!;
+        } else {
+            const customersRef = collection(firestore, 'customers');
+            const q = query(customersRef, where('name', '==', customerName.trim()), limit(1));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                const existingCustomer = querySnapshot.docs[0];
+                customerId = existingCustomer.id;
+            } else {
+                customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${processedCount}-${Date.now()}`;
+                const customerDocRef = doc(firestore, 'customers', customerId);
+                const newCustomerData: Partial<Customer> = {
+                    id: customerId,
+                    name: customerName.trim(),
+                    address: record.Address || 'N/A',
+                    phone: record.Phone || 'N/A',
+                };
+                // This write can be non-blocking
+                setDocumentNonBlocking(customerDocRef, newCustomerData, { merge: true });
+            }
+            customerCache.set(normalizedCustomerName, customerId);
+        }
   
-        const customerId = `cust-${customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
         const recordId = `rec-${Date.now()}-${processedCount}`;
   
         const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
@@ -109,7 +139,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
   
         const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
           id: recordId,
-          customer: customerName,
+          customer: customerName.trim(),
           technician: techName,
           date: recordDate,
           summary: summary,
@@ -129,22 +159,9 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
           status: (record.Status as any) || 'N/A'
         };
   
-        // Save to technician's subcollection
-        const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-        setDocumentNonBlocking(techRecordRef, newRecord, {});
-  
-        // Save to customer's subcollection
+        // Save to customer's subcollection ONLY. This is the single source of truth.
         const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-        setDocumentNonBlocking(customerRecordRef, newRecord, {});
-  
-        // Also save/update the main customer profile
-        const customerDocRef = doc(firestore, 'customers', customerId);
-        setDocumentNonBlocking(customerDocRef, {
-          id: customerId,
-          name: customerName,
-          address: record.Address || 'N/A',
-          phone: record.Phone || 'N/A',
-        }, { merge: true });
+        addDocumentNonBlocking(collection(firestore, 'customers', customerId, 'serviceRecords'), newRecord);
         
         processedCount++;
         setProgress((processedCount / totalRecords) * 100);
