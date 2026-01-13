@@ -70,28 +70,37 @@ function LoginFormContent() {
       });
       // onAuthStateChanged will handle the redirect
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        // If user doesn't exist, create a new account
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // If user doesn't exist (or generic invalid credential), try creating a new account
         try {
           await createUserWithEmailAndPassword(auth, email, password);
           toast({
-            title: 'Account Created!',
+            title: 'Account Created & Signed In!',
             description: 'Welcome! Your new account has been created.',
           });
         } catch (createError: any) {
+            // If creation also fails, it's likely a bad password or other issue.
+            let errorMessage = createError.message || 'An unexpected error occurred.';
+            if (createError.code === 'auth/weak-password') {
+                errorMessage = 'The password is too weak. Please use at least 6 characters.';
+            }
+             else if (error.code === 'auth/invalid-credential') {
+                errorMessage = 'The password you entered is incorrect. Please try again or use "Forgot Password?".'
+            }
           toast({
-            title: 'Account Creation Failed',
-            description: createError.message || 'An unexpected error occurred.',
+            title: 'Sign In or Sign Up Failed',
+            description: errorMessage,
             variant: 'destructive',
           });
         }
-      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      } else if (error.code === 'auth/wrong-password') {
         toast({
             title: 'Sign In Failed',
             description: 'The password you entered is incorrect. Please try again or use "Forgot Password?".',
             variant: 'destructive',
         });
-      } else {
+      }
+      else {
         toast({
             title: 'Sign In Failed',
             description: error.message || 'An unexpected error occurred.',
@@ -108,7 +117,7 @@ function LoginFormContent() {
     setPassword('');
     toast({
         title: 'Guest Login',
-        description: 'The password is "kdhvac".',
+        description: 'The password is "kdhvac". Please enter it and sign in.',
     });
   }
 
