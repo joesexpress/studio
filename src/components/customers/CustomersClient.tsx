@@ -169,7 +169,7 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
     <>
     <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Customers & Jobs</h1>
           <p className="text-muted-foreground">View customer information and job history.</p>
         </div>
         <div className="flex items-center gap-2">

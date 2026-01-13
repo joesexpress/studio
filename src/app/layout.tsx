@@ -98,10 +98,10 @@ export default function RootLayout({
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Customers">
+                <SidebarMenuButton asChild tooltip="Customers & Jobs">
                   <Link href="/customers">
                     <Users />
-                    <span>Customers</span>
+                    <span>Customers & Jobs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
