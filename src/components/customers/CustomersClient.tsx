@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -71,6 +70,12 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
       dateRange: undefined,
       status: []
   });
+  
+  // When the underlying data changes (e.g., after deletion), we need to clear selected rows
+  React.useEffect(() => {
+    setSelectedRows([]);
+  }, [allRecords]);
+
 
   const filteredRecords = React.useMemo(() => {
     return (allRecords || []).filter(record => {
@@ -172,7 +177,7 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Customers & Jobs</h1>
+          
           <p className="text-muted-foreground">A consolidated view of all service records.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -357,7 +362,7 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
               )) : (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center">
-                    No records found for the selected filters.
+                    No records found. Use the 'Import from CSV' button to get started.
                   </TableCell>
                 </TableRow>
               )}
