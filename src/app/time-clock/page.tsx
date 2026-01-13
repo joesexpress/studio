@@ -2,9 +2,12 @@
 'use client';
 
 import TimeClockClient from '@/components/time-clock/TimeClockClient';
-import { MOCK_TIME_LOGS } from '@/lib/mock-data';
+import { MOCK_TIME_LOGS, MOCK_TECHNICIANS } from '@/lib/mock-data';
 
 export default function TimeClockPage() {
+
+  const technicians = MOCK_TECHNICIANS;
+  const timeLogs = MOCK_TIME_LOGS;
 
   return (
     <>
@@ -14,7 +17,7 @@ export default function TimeClockPage() {
           <p className="text-muted-foreground">Clock in and out for your shifts.</p>
         </div>
       </div>
-      <TimeClockClient initialTimeLogs={MOCK_TIME_LOGS} />
+      <TimeClockClient initialTimeLogs={timeLogs} technicians={technicians} />
     </>
   );
 }

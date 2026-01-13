@@ -23,7 +23,7 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   const [activeLog, setActiveLog] = React.useState<Partial<TimeLog> | null>(null);
   const [notes, setNotes] = React.useState('');
   const [currentTime, setCurrentTime] = React.useState<Date | null>(null);
-  const [selectedTechnician, setSelectedTechnician] = React.useState<string>(technicians[0]?.id || '');
+  const [selectedTechnician, setSelectedTechnician] = React.useState<string>(technicians?.[0]?.id || '');
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
 
   const { toast } = useToast();
