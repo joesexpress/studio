@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { extractDataFromServiceRecord } from "@/ai/flows/extract-data-from-service-records";
 import { summarizeServiceRecord } from "@/ai/flows/summarize-service-records";
 import { z } from "zod";
-import { doc, serverTimestamp, collection, getFirestore, setDoc } from 'firebase/firestore';
+import { doc, collection, getFirestore, setDoc } from 'firebase/firestore';
 import { initializeFirebase as initializeFirebaseClient, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import type { ServiceRecord, Customer, Technician } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
@@ -55,7 +55,7 @@ export async function processServiceRecord(formData: FormData) {
       id: recordId,
       customer: extractedData.customer,
       technician: technicianName,
-      date: serverTimestamp(),
+      date: new Date(),
       summary: summaryData.summary,
       address: extractedData.address,
       phone: extractedData.phone,
@@ -78,28 +78,26 @@ export async function processServiceRecord(formData: FormData) {
 
     // Save to technician's subcollection
     const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-    setDocumentNonBlocking(techRecordRef, newRecord, {});
+    await setDoc(techRecordRef, newRecord);
 
     // Save to customer's subcollection
     const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-    setDocumentNonBlocking(customerRecordRef, newRecord, {});
+    await setDoc(customerRecordRef, newRecord);
 
     // Also save/update the main customer profile
     const customerDocRef = doc(firestore, 'customers', customerId);
-    setDocumentNonBlocking(customerDocRef, {
+    await setDoc(customerDocRef, {
       id: customerId,
       name: extractedData.customer,
       address: extractedData.address,
       phone: extractedData.phone,
     }, { merge: true });
 
-    // Since we're not awaiting, we can't be 100% sure the write is done before revalidation.
-    // For optimistic UI, this is generally okay.
-    revalidatePath("/records");
-    revalidatePath("/customers");
-    revalidatePath("/dashboard");
+    revalidatePath("/records", "layout");
+    revalidatePath("/customers", "layout");
+    revalidatePath("/dashboard", "layout");
 
-    return { success: true, record: { ...newRecord, date: new Date().toISOString() } }; // Return with a serializable date
+    return { success: true, record: { ...newRecord, date: newRecord.date.toISOString() } }; // Return with a serializable date
   } catch (error) {
     console.error("Error processing service record:", error);
     return { success: false, error: "Failed to process service record using AI." };
@@ -147,7 +145,7 @@ export async function addCustomerAndJob(formData: FormData) {
 
   const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
     id: recordId,
-    date: serverTimestamp(),
+    date: new Date(),
     technician: technicianName,
     customer: name,
     address,
@@ -170,18 +168,18 @@ export async function addCustomerAndJob(formData: FormData) {
   try {
     // Save customer profile
     const customerRef = doc(firestore, 'customers', customerId);
-    setDocumentNonBlocking(customerRef, customerData, { merge: true });
+    await setDoc(customerRef, customerData, { merge: true });
 
     // Save service record to technician's subcollection
     const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
-    setDocumentNonBlocking(techRecordRef, recordData, {});
+    await setDoc(techRecordRef, recordData);
 
     // Save service record to customer's subcollection
     const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
-    setDocumentNonBlocking(customerRecordRef, recordData, {});
+    await setDoc(customerRecordRef, recordData);
     
-    revalidatePath('/customers');
-    revalidatePath('/records');
+    revalidatePath('/customers', "layout");
+    revalidatePath('/records', "layout");
 
     return { success: true, customerId, recordId };
   } catch (error) {
@@ -303,5 +301,8 @@ export async function processCsvImport(formData: FormData) {
     
 
     
+
+    
+
 
     
