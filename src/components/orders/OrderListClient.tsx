@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import type { OrderItem } from '@/lib/types';
+import type { OrderItem, ResponsiblePerson } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Badge } from '../ui/badge';
+
+const responsiblePeople: ResponsiblePerson[] = ['Jake', 'Phil', 'Derek', 'FCFS'];
 
 export default function OrderListClient({ initialItems }: { initialItems: OrderItem[] }) {
   const [items, setItems] = React.useState(initialItems);
   const [newItemName, setNewItemName] = React.useState('');
   const [newItemQty, setNewItemQty] = React.useState(1);
+  const [accountable, setAccountable] = React.useState<ResponsiblePerson>('FCFS');
   const { toast } = useToast();
   const { firestore } = useFirebase();
+
+  // Using a mock user ID as login is removed.
+  const mockUserId = 'tech-jake';
 
   React.useEffect(() => {
       setItems(initialItems);
@@ -33,19 +41,21 @@ export default function OrderListClient({ initialItems }: { initialItems: OrderI
     const newItem: Omit<OrderItem, 'id'> = {
       name: newItemName.trim(),
       quantity: newItemQty,
+      accountable: accountable,
+      technicianId: mockUserId,
     };
     
-    // As in orders/page.tsx, we are using a shared list under a generic technician
-    const listRef = collection(firestore, 'technicians', 'tech-jake', 'shoppingList');
+    const listRef = collection(firestore, 'technicians', mockUserId, 'shoppingList');
     addDocumentNonBlocking(listRef, newItem);
 
     setNewItemName('');
     setNewItemQty(1);
+    setAccountable('FCFS');
   };
 
   const handleDeleteItem = (itemId: string) => {
     if (!firestore) return;
-    const itemRef = doc(firestore, 'technicians', 'tech-jake', 'shoppingList', itemId);
+    const itemRef = doc(firestore, 'technicians', mockUserId, 'shoppingList', itemId);
     deleteDocumentNonBlocking(itemRef);
   };
 
@@ -69,6 +79,14 @@ export default function OrderListClient({ initialItems }: { initialItems: OrderI
             min="1"
             className="w-20"
           />
+          <Select value={accountable} onValueChange={(value) => setAccountable(value as ResponsiblePerson)}>
+            <SelectTrigger className="w-[120px]">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+                {responsiblePeople.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Button onClick={handleAddItem}>
             <Plus className="h-4 w-4 mr-2" /> Add
           </Button>
@@ -82,6 +100,9 @@ export default function OrderListClient({ initialItems }: { initialItems: OrderI
                     <p className="font-medium">{item.name}</p>
                     <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
                   </div>
+                  <Badge variant={item.accountable === 'FCFS' ? 'secondary' : 'outline'} className="text-xs">
+                    {item.accountable}
+                  </Badge>
                   <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => handleDeleteItem(item.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

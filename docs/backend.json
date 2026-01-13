@@ -175,6 +175,24 @@
       },
       "required": ["id", "task", "isCompleted", "createdAt", "technicianId", "responsible"]
     },
+    "ShoppingListItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ShoppingListItem",
+      "type": "object",
+      "description": "Represents an item on the shopping list.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the shopping list item." },
+        "name": { "type": "string", "description": "The name of the item to be purchased." },
+        "quantity": { "type": "number", "description": "The quantity of the item to be purchased." },
+        "accountable": {
+          "type": "string",
+          "description": "The person accountable for purchasing the item.",
+          "enum": ["Jake", "Phil", "Derek", "FCFS"]
+        },
+        "technicianId": { "type": "string", "description": "The ID of the technician this shopping list item belongs to." }
+      },
+      "required": ["id", "name", "quantity", "accountable", "technicianId"]
+    },
     "CalendarEvent": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CalendarEvent",
@@ -392,6 +410,18 @@
             "params": [
                 { "name": "technicianId", "description": "The unique identifier for the technician." },
                 { "name": "entryId", "description": "The unique identifier for the price book entry." }
+            ]
+        }
+      },
+      {
+        "path": "/technicians/{technicianId}/shoppingList/{itemId}",
+        "definition": {
+            "entityName": "ShoppingListItem",
+            "schema": { "$ref": "#/backend/entities/ShoppingListItem" },
+            "description": "Stores shopping list items for a technician.",
+            "params": [
+                { "name": "technicianId", "description": "The unique identifier for the technician." },
+                { "name": "itemId", "description": "The unique identifier for the shopping list item." }
             ]
         }
       },

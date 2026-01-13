@@ -106,6 +106,8 @@ export type OrderItem = {
     id: string;
     name: string;
     quantity: number;
+    accountable: ResponsiblePerson;
+    technicianId: string;
 };
 
 export type QuoteStatus = 'Draft' | 'Sent' | 'Accepted' | 'Declined';

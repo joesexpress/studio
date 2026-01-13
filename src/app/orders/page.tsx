@@ -3,18 +3,21 @@
 
 import OrderListClient from '@/components/orders/OrderListClient';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
+import { OrderItem } from '@/lib/types';
 
 export default function OrdersPage() {
     const { firestore } = useFirebase();
 
-    const itemsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        // As in orders/page.tsx, we are using a shared list under a generic technician
-        return collection(firestore, 'technicians', 'tech-jake', 'shoppingList');
-    }, [firestore]);
+    // Using a mock user ID as login is removed.
+    const mockUserId = 'tech-jake';
 
-    const { data: initialItems, isLoading } = useCollection(itemsQuery);
+    const itemsQuery = useMemoFirebase(() => {
+        if (!firestore || !mockUserId) return null;
+        return query(collection(firestore, 'technicians', mockUserId, 'shoppingList'));
+    }, [firestore, mockUserId]);
+
+    const { data: initialItems, isLoading } = useCollection<OrderItem>(itemsQuery);
 
     if (isLoading) {
         return <div>Loading shopping list...</div>
