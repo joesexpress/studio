@@ -6,7 +6,7 @@ import { summarizeServiceRecord } from "@/ai/flows/summarize-service-records";
 import { z } from "zod";
 import { doc, serverTimestamp, collection } from 'firebase/firestore';
 import { initializeFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import type { ServiceRecord } from '@/lib/types';
+import type { ServiceRecord, Customer } from '@/lib/types';
 import { getAuth } from 'firebase/auth';
 
 const fileSchema = z.object({
@@ -90,5 +90,87 @@ export async function processServiceRecord(formData: FormData) {
   } catch (error) {
     console.error("Error processing service record:", error);
     return { success: false, error: "Failed to process service record using AI." };
+  }
+}
+
+
+const addCustomerSchema = z.object({
+  name: z.string().min(1, { message: "Customer name is required." }),
+  address: z.string().min(1, { message: "Address is required." }),
+  phone: z.string().min(1, { message: "Phone number is required." }),
+  jobDescription: z.string().min(1, { message: "Job description is required." }),
+  technicianId: z.string().min(1, { message: "Technician ID is required." }),
+});
+
+
+export async function addCustomerAndJob(formData: FormData) {
+  const rawFormData = {
+    name: formData.get('name'),
+    address: formData.get('address'),
+    phone: formData.get('phone'),
+    jobDescription: formData.get('jobDescription'),
+    technicianId: formData.get('technicianId'),
+  };
+
+  const validation = addCustomerSchema.safeParse(rawFormData);
+  if (!validation.success) {
+    return { success: false, error: "Invalid form data." };
+  }
+
+  const { name, address, phone, jobDescription, technicianId } = validation.data;
+  const { firestore } = initializeFirebase();
+
+  const customerId = `cust-${name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-${Date.now()}`;
+  const recordId = `rec-${Date.now()}`;
+
+  const customerData: Partial<Customer> = {
+    id: customerId,
+    name,
+    address,
+    phone,
+  };
+
+  const recordData: Omit<ServiceRecord, 'date'> & { date: any } = {
+    id: recordId,
+    date: serverTimestamp(),
+    technician: 'N/A', // Or get current tech name
+    customer: name,
+    address,
+    phone,
+    model: 'N/A',
+    serial: 'N/A',
+    filterSize: 'N/A',
+    freonType: 'N/A',
+    laborHours: 'N/A',
+    breakdown: 'N/A',
+    description: jobDescription,
+    total: 0,
+    status: 'Scheduled',
+    fileUrl: '#',
+    summary: 'New job scheduled.',
+    technicianId,
+    customerId,
+  };
+
+  try {
+    // Save customer profile
+    const customerRef = doc(firestore, 'customers', customerId);
+    setDocumentNonBlocking(customerRef, customerData, { merge: true });
+
+    // Save service record to technician's subcollection
+    const techRecordRef = doc(firestore, 'technicians', technicianId, 'serviceRecords', recordId);
+    setDocumentNonBlocking(techRecordRef, recordData, {});
+
+    // Save service record to customer's subcollection
+    const customerRecordRef = doc(firestore, 'customers', customerId, 'serviceRecords', recordId);
+    setDocumentNonBlocking(customerRecordRef, recordData, {});
+    
+    revalidatePath('/customers');
+    revalidatePath('/records');
+
+    return { success: true, customerId, recordId };
+  } catch (error) {
+    console.error("Error creating customer and job:", error);
+    return { success: false, error: "Failed to save new customer and job." };
   }
 }

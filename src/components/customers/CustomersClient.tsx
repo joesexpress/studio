@@ -16,21 +16,26 @@ import { Badge } from '@/components/ui/badge';
 import RecordDetailsSheet from '../records/RecordDetailsSheet';
 import { Button } from '../ui/button';
 import { format } from 'date-fns';
-import { Edit, MapPin, Phone } from 'lucide-react';
+import { Edit, MapPin, Phone, PlusCircle } from 'lucide-react';
 import EditCustomerDialog from './EditCustomerDialog';
 import { setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import AddCustomerDialog from './AddCustomerDialog';
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
     switch (status) {
       case 'Paid':
         return 'secondary';
+      case 'Completed':
+        return 'secondary';
+      case 'Scheduled':
+        return 'default';
       case 'Owed':
         return 'destructive';
       case 'Estimate':
-        return 'default';
+        return 'outline';
       default:
         return 'outline';
     }
@@ -41,6 +46,7 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [isEditCustomerOpen, setIsEditCustomerOpen] = React.useState(false);
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = React.useState(false);
 
   const { firestore } = useFirebase();
   const { toast } = useToast();
@@ -107,6 +113,10 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground">View customer information and job history.</p>
         </div>
+        <Button size="sm" onClick={() => setIsAddCustomerOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Customer & Job
+        </Button>
       </div>
     <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)]">
       <Card className="lg:col-span-1">
@@ -221,6 +231,10 @@ export default function CustomersClient({ customers }: { customers: Customer[] }
         onOpenChange={setIsEditCustomerOpen}
         customer={selectedCustomer}
         onSave={handleUpdateCustomer}
+    />
+    <AddCustomerDialog
+        isOpen={isAddCustomerOpen}
+        onOpenChange={setIsAddCustomerOpen}
     />
     </>
   );

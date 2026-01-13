@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import type { ServiceRecord } from '@/lib/types';
+import type { ServiceRecord, ServiceRecordStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Bot, Edit, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
@@ -42,6 +42,24 @@ const EditableDetailItem = ({ label, value, onChange, name }: { label: string; v
       <Input id={name} name={name} value={value} onChange={onChange} className="col-span-2 h-8" />
     </div>
 );
+
+const getStatusVariant = (status?: ServiceRecordStatus) => {
+    switch (status) {
+      case 'Paid':
+        return 'secondary';
+      case 'Completed':
+        return 'secondary';
+      case 'Scheduled':
+        return 'default';
+      case 'Owed':
+        return 'destructive';
+      case 'Estimate':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
+
 
 export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRecordUpdated }: RecordDetailsSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -145,6 +163,8 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                                 <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
                                 <SelectItem value="Paid">Paid</SelectItem>
                                 <SelectItem value="Owed">Owed</SelectItem>
                                 <SelectItem value="Estimate">Estimate</SelectItem>
@@ -202,7 +222,7 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
                 <div className="grid grid-cols-3 gap-2 text-sm items-center">
                     <span className="text-muted-foreground">Status</span>
                     <div className="col-span-2">
-                        <Badge variant={currentData.status === 'Paid' ? 'secondary' : currentData.status === 'Owed' ? 'destructive' : 'default'} className="capitalize">
+                        <Badge variant={getStatusVariant(currentData.status)} className="capitalize">
                         {currentData.status}
                         </Badge>
                     </div>

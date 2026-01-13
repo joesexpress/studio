@@ -32,17 +32,21 @@ type RecordsPageClientProps = {
 };
 
 const getStatusVariant = (status: ServiceRecordStatus) => {
-  switch (status) {
-    case 'Paid':
-      return 'secondary';
-    case 'Owed':
-      return 'destructive';
-    case 'Estimate':
-      return 'default';
-    default:
-      return 'outline';
-  }
-};
+    switch (status) {
+      case 'Paid':
+        return 'secondary';
+      case 'Completed':
+        return 'secondary';
+      case 'Scheduled':
+        return 'default';
+      case 'Owed':
+        return 'destructive';
+      case 'Estimate':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
 
 export default function RecordsPageClient({ initialRecords }: RecordsPageClientProps) {
   const [records, setRecords] = React.useState<ServiceRecord[]>(initialRecords);
@@ -110,7 +114,7 @@ export default function RecordsPageClient({ initialRecords }: RecordsPageClientP
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {(['Paid', 'Owed', 'Estimate', 'No Charge'] as ServiceRecordStatus[]).map(status => (
+              {(['Scheduled', 'Completed', 'Paid', 'Owed', 'Estimate', 'No Charge'] as ServiceRecordStatus[]).map(status => (
                 <DropdownMenuCheckboxItem
                   key={status}
                   checked={statusFilter.includes(status)}

@@ -42,7 +42,7 @@ export default function DashboardFilters({ filters, onFiltersChange, technicians
     onFiltersChange({ dateRange: undefined, technician: '', status: '' });
   }
 
-  const statuses: ServiceRecordStatus[] = ['Paid', 'Owed', 'Estimate', 'No Charge'];
+  const statuses: ServiceRecordStatus[] = ['Scheduled', 'Completed', 'Paid', 'Owed', 'Estimate', 'No Charge'];
 
   return (
     <Card className="p-4">

@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type ServiceRecordStatus = 'Paid' | 'Owed' | 'Estimate' | 'No Charge' | 'N/A';
+export type ServiceRecordStatus = 'Scheduled' | 'Completed' | 'Paid' | 'Owed' | 'Estimate' | 'No Charge' | 'N/A';
 
 export type ServiceRecord = {
   id: string;
@@ -89,5 +89,3 @@ export type PriceBookEntry = {
   uploadedAt: Timestamp;
   technicianId: string;
 };
-
-    
