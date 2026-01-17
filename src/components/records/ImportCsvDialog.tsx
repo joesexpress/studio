@@ -61,7 +61,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       const parsedData = Papa.parse(fileContent, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: header => header.trim(),
+        transformHeader: header => header.trim().toLowerCase(),
       });
   
       if (parsedData.errors.length > 0) {
@@ -85,14 +85,14 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
       });
   
       for (const [index, record] of records.entries()) {
-        const customerName = record.Customer || 'N/A';
+        const customerName = record['customer'] || 'N/A';
         if (customerName === 'N/A' || !customerName.trim()) {
             processedCount++;
             setProgress((processedCount / totalRecords) * 100);
             continue; // Skip rows without a customer name
         };
 
-        const techName = record.Tech || 'N/A';
+        const techName = record['tech'] || 'N/A';
         const technician = MOCK_TECHNICIANS.find(t => t.name.toLowerCase() === techName.toLowerCase());
         const technicianId = technician?.id || 'tbd';
 
@@ -107,8 +107,8 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             const newCustomerData: Partial<Customer> = {
                 id: newCustomerId,
                 name: customerName.trim(),
-                address: record.Address || 'N/A',
-                phone: record.Phone || 'N/A',
+                address: record['address'] || 'N/A',
+                phone: record['phone'] || 'N/A',
             };
             const customerDocRef = doc(firestore, 'customers', newCustomerId);
             // CRITICAL: Await this write to ensure customer exists before adding subcollection docs.
@@ -120,25 +120,26 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             customerId = customer.id;
         }
   
-        const recordId = `rec-${customerId}-${record.Date ? new Date(record.Date).getTime() : Date.now()}-${index}`;
+        const dateForId = record['date'] ? new Date(record['date']).getTime() : Date.now();
+        const recordId = `rec-${customerId}-${dateForId}-${index}`;
   
-        const total = parseFloat(record.Total?.replace(/[^0-9.-]+/g,"")) || 0;
+        const total = parseFloat(String(record['total'] || '').replace(/[^0-9.-]+/g,"")) || 0;
         
         let recordDate;
-        if (record.Date) {
-          const parsedDate = new Date(record.Date);
+        if (record['date']) {
+          const parsedDate = new Date(record['date']);
           // Check if the parsed date is valid. If not, default to now.
           if (!isNaN(parsedDate.getTime())) {
             recordDate = parsedDate;
           } else {
-            console.warn(`Invalid date format for record, using current date: ${record.Date}`);
+            console.warn(`Invalid date format for record, using current date: ${record['date']}`);
             recordDate = new Date();
           }
         } else {
           recordDate = new Date();
         }
   
-        const description = record['Full Description of Work'] || 'N/A';
+        const description = record['full description of work'] || 'N/A';
         const summary = description.length > 100 ? description.substring(0, 100) + '...' : description;
   
         const newRecord: Omit<ServiceRecord, 'date'> & { date: any } = {
@@ -147,20 +148,20 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
           technician: techName,
           date: recordDate,
           summary: summary,
-          address: record.Address || 'N/A',
-          phone: record.Phone || 'N/A',
-          model: record.Model || 'N/A',
-          serial: record.Serial || 'N/A',
-          filterSize: record['Filter Size'] || 'N/A',
-          freonType: record.Freon || 'N/A',
-          laborHours: String(record['Total Hours'] || 'N/A'),
-          breakdown: String(record.Breakdown || 'N/A'),
+          address: record['address'] || 'N/A',
+          phone: record['phone'] || 'N/A',
+          model: record['model'] || 'N/A',
+          serial: record['serial'] || 'N/A',
+          filterSize: record['filter size'] || 'N/A',
+          freonType: record['freon'] || 'N/A',
+          laborHours: String(record['total hours'] || 'N/A'),
+          breakdown: String(record['breakdown'] || 'N/A'),
           description: description,
           total: total,
-          fileUrl: record['File Link'] || '#',
+          fileUrl: record['file link'] || '#',
           technicianId: technicianId,
           customerId: customerId,
-          status: (record.Status as any) || 'N/A'
+          status: (record['status'] as any) || 'N/A'
         };
   
         // Add service record write to the batch
@@ -214,7 +215,7 @@ export default function ImportCsvDialog({ isOpen, onOpenChange }: ImportCsvDialo
             <Alert>
                 <AlertTitle>Required CSV Format</AlertTitle>
                 <AlertDescription className="text-xs">
-                    Your file must contain these exact headers: <br/>
+                    Your file must contain these exact headers (capitalization does not matter): <br/>
                     <code className="font-mono bg-muted p-1 rounded-sm">Date,Tech,Customer,Address,Phone,Model,Serial,Filter Size,Freon,Total Hours,Breakdown,Full Description of Work,Total,Status,File Link</code>
                 </AlertDescription>
             </Alert>
