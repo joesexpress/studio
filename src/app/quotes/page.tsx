@@ -20,7 +20,7 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import AddQuoteDialog from '@/components/quotes/AddQuoteDialog';
 import { Badge } from '@/components/ui/badge';
 import type { QuoteStatus } from '@/lib/types';
-import { downloadCsv } from '@/lib/utils';
+import { downloadCsv, safeToDate } from '@/lib/utils';
 
 const getStatusVariant = (status: QuoteStatus) => {
     switch (status) {
@@ -51,8 +51,8 @@ export default function QuotesPage() {
   
   const getQuoteDate = (quote: Quote, field: 'createdAt' | 'validUntil') => {
     const dateValue = quote[field];
-    if (!dateValue) return 'N/A';
-    const date = typeof dateValue === 'string' ? new Date(dateValue) : (dateValue as any).toDate();
+    const date = safeToDate(dateValue);
+    if (!date) return 'N/A';
     return format(date, 'P');
   }
 

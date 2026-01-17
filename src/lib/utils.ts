@@ -19,3 +19,28 @@ export function downloadCsv(data: any[], filename: string) {
   link.click();
   document.body.removeChild(link);
 }
+
+export function safeToDate(date: any): Date | null {
+  if (!date) return null;
+
+  // If it's a Firestore Timestamp
+  if (typeof date.toDate === 'function') {
+    return date.toDate();
+  }
+
+  // If it's already a JS Date
+  if (date instanceof Date) {
+    // Check if the date is valid
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  // If it's a string or number that can be parsed
+  const parsedDate = new Date(date);
+  if (!isNaN(parsedDate.getTime())) {
+    return parsedDate;
+  }
+
+  return null;
+}

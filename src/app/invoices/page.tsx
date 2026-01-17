@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collectionGroup, query, where } from 'firebase/firestore';
 import { Download } from 'lucide-react';
-import { downloadCsv } from '@/lib/utils';
+import { downloadCsv, safeToDate } from '@/lib/utils';
 
 export default function InvoicesPage() {
   const [selectedRecord, setSelectedRecord] = React.useState<ServiceRecord | null>(null);
@@ -45,8 +45,8 @@ export default function InvoicesPage() {
   };
 
   const getRecordDate = (record: ServiceRecord) => {
-    if (!record.date) return 'N/A';
-    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+    const date = safeToDate(record.date);
+    if (!date) return 'N/A';
     return format(date, 'P');
   };
 

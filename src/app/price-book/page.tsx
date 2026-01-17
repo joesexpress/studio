@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { PlusCircle, Download } from 'lucide-react';
 import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { safeToDate } from '@/lib/utils';
 // import UploadPriceBookDialog from './UploadPriceBookDialog';
 
 export default function PriceBookPage() {
@@ -34,8 +35,8 @@ export default function PriceBookPage() {
   const { data: priceBookEntries, isLoading: isEntriesLoading } = useCollection<PriceBookEntry>(priceBookQuery, { skip: !isAuthReady });
 
   const getEntryDate = (entry: PriceBookEntry) => {
-    if (!entry.uploadedAt) return 'N/A';
-    const date = (entry.uploadedAt as any).toDate();
+    const date = safeToDate(entry.uploadedAt);
+    if (!date) return 'N/A';
     return format(date, 'PPP p');
   };
 

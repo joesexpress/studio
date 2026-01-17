@@ -34,6 +34,7 @@ import { useFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
+import { safeToDate } from '@/lib/utils';
 
 type RecordDetailsSheetProps = {
   record: ServiceRecord | null;
@@ -143,8 +144,8 @@ export default function RecordDetailsSheet({ record, isOpen, onOpenChange, onRec
   };
 
   const getRecordDate = () => {
-    if (!record.date) return 'N/A';
-    const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
+    const date = safeToDate(record.date);
+    if (!date) return 'N/A';
     return format(date, 'PPP');
   }
 

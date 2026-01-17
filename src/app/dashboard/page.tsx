@@ -11,6 +11,7 @@ import { format, isWithinInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query } from 'firebase/firestore';
+import { safeToDate } from '@/lib/utils';
 
 
 function useDashboardData(
@@ -37,7 +38,8 @@ function useDashboardData(
     const uniqueTechnicians = Array.from(new Set(serviceRecords.map(r => r.technician).filter(Boolean))).sort();
 
     const filteredRecords = serviceRecords.filter(record => {
-      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
+      const recordDate = safeToDate(record.date);
+      if (!recordDate) return false;
 
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
       const techMatch = !filters.technician || record.technician === filters.technician;
@@ -53,8 +55,8 @@ function useDashboardData(
     const customerLastService: { [key: string]: Date } = {};
 
     serviceRecords.forEach(record => {
-        const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
-        if (!customerLastService[record.customerId] || recordDate > customerLastService[record.customerId]) {
+        const recordDate = safeToDate(record.date);
+        if (recordDate && (!customerLastService[record.customerId] || recordDate > customerLastService[record.customerId])) {
             customerLastService[record.customerId] = recordDate;
         }
     });
@@ -73,7 +75,8 @@ function useDashboardData(
     let totalRevenue = 0;
 
     filteredRecords.forEach(record => {
-      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : new Date();
+      const recordDate = safeToDate(record.date);
+      if (!recordDate) return;
 
       // Technician Performance
       if (record.technician) {

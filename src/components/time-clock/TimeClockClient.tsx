@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '../ui/calendar';
 import type { DateRange } from 'react-day-picker';
-import { cn, downloadCsv } from '@/lib/utils';
+import { cn, downloadCsv, safeToDate } from '@/lib/utils';
 import { useFirebase, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
 
@@ -87,7 +87,10 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     if (!activeLog || !activeLog.timeIn || !firestore) return;
 
     const timeOut = new Date();
-    const totalMinutes = differenceInMinutes(timeOut, activeLog.timeIn as Date);
+    const timeInDate = safeToDate(activeLog.timeIn);
+    if (!timeInDate) return;
+
+    const totalMinutes = differenceInMinutes(timeOut, timeInDate);
     const totalHours = totalMinutes / 60;
 
     const completedLog: Omit<TimeLog, 'timeIn' | 'timeOut'> & {timeIn: any, timeOut: any} = {
@@ -118,14 +121,14 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
   };
 
   const getFormattedDate = (date: any) => {
-    if (!date) return 'N/A';
-    const d = typeof date.toDate === 'function' ? date.toDate() : new Date(date);
+    const d = safeToDate(date);
+    if (!d) return 'N/A';
     return format(d, 'p');
   }
   
   const getRowDate = (date: any) => {
-    if (!date) return 'N/A';
-    const d = typeof date.toDate === 'function' ? date.toDate() : new Date(date);
+    const d = safeToDate(date);
+    if (!d) return 'N/A';
     return format(d, 'PP');
   }
 
@@ -134,9 +137,10 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
       const techMatch = log.technicianId === selectedTechnician;
       if (!techMatch) return false;
       if (!dateRange?.from) return true;
-      const logDate = log.timeIn && typeof (log.timeIn as any).toDate === 'function' 
-        ? (log.timeIn as any).toDate()
-        : new Date(log.timeIn as any);
+      
+      const logDate = safeToDate(log.timeIn);
+      if(!logDate) return false;
+
       return isWithinInterval(logDate, { start: dateRange.from, end: dateRange.to || new Date(dateRange.from.getTime() + 24 * 60 * 60 * 1000 -1) });
     });
   }, [timeLogs, selectedTechnician, dateRange]);
@@ -160,6 +164,8 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
     }));
     downloadCsv(dataToExport, `time-log-report-${selectedTechName}-${new Date().toISOString().split('T')[0]}.csv`);
   }
+
+  const activeTimeIn = activeLog?.timeIn ? safeToDate(activeLog.timeIn) : null;
 
   return (
     <>
@@ -232,9 +238,9 @@ export default function TimeClockClient({ initialTimeLogs, technicians }: { init
             <div>
               <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="font-semibold">{currentActiveTechnician ? `${currentActiveTechnician.name} is clocked in` : 'Clocked Out'}</p>
-              {activeLog?.timeIn && currentTime && (
+              {activeTimeIn && currentTime && (
                  <p className="text-sm text-muted-foreground">
-                    Shift duration: {formatDistanceStrict(currentTime, activeLog.timeIn as Date)}
+                    Shift duration: {formatDistanceStrict(currentTime, activeTimeIn)}
                 </p>
               )}
             </div>

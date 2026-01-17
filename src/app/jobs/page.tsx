@@ -8,6 +8,7 @@ import TodoList from '@/components/jobs/TodoList';
 import JobCalendar from '@/components/jobs/JobCalendar';
 import { useFirebase, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { safeToDate } from '@/lib/utils';
 
 export default function JobsPage() {
   const { firestore, user, isAuthReady } = useFirebase();
@@ -33,8 +34,8 @@ export default function JobsPage() {
     if (!calendarEvents) return [];
     return calendarEvents.map(event => ({
       ...event,
-      start: (event.start as any).toDate(),
-      end: (event.end as any).toDate(),
+      start: safeToDate(event.start) || new Date(),
+      end: safeToDate(event.end) || new Date(),
     }));
   }, [calendarEvents]);
   

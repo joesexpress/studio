@@ -20,7 +20,7 @@ import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { MOCK_TECHNICIANS } from '@/lib/mock-data';
-import { downloadCsv } from '@/lib/utils';
+import { downloadCsv, safeToDate } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -99,19 +99,19 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
       const techMatch = !filters.technician || record.technicianId === filters.technician;
       const customerMatch = !filters.customer || record.customerId === filters.customer;
       const statusMatch = filters.status.length === 0 || filters.status.includes(record.status);
-
-      const recordDate = record.date ? (typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate()) : null;
-      if (!recordDate || isNaN(recordDate.getTime())) {
-        return false; // Exclude records with invalid dates
+      
+      const recordDate = safeToDate(record.date);
+      if (!recordDate) {
+        return false; 
       }
 
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(recordDate, { start: filters.dateRange.from, end: filters.dateRange.to });
 
       return searchMatch && techMatch && customerMatch && statusMatch && dateMatch;
     }).sort((a,b) => {
-        const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : (a.date as any).toDate()).getTime() : 0;
-        const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
-        return dateB - dateA;
+        const dateA = safeToDate(a.date);
+        const dateB = safeToDate(b.date);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
     });
   }, [allRecords, searchTerm, filters]);
   
@@ -130,14 +130,9 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
   };
 
   const getRecordDate = (record: ServiceRecord) => {
-    if (!record.date) return 'N/A';
-    try {
-      const date = typeof record.date === 'string' ? new Date(record.date) : (record.date as any).toDate();
-      if (isNaN(date.getTime())) return "Invalid Date";
-      return format(date, 'P');
-    } catch {
-      return "Invalid Date";
-    }
+    const date = safeToDate(record.date);
+    if (!date) return 'N/A';
+    return format(date, 'P');
   }
 
   const handleDownloadReport = () => {

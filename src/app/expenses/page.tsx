@@ -23,8 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { DateRange } from 'react-day-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { downloadCsv } from '@/lib/utils';
+import { cn, safeToDate, downloadCsv } from '@/lib/utils';
 
 export default function ExpensesPage() {
   const [isUploadOpen, setIsUploadOpen] = React.useState(false);
@@ -67,21 +66,23 @@ export default function ExpensesPage() {
     return allExpenses.filter(expense => {
       const techMatch = filters.technicianId === 'all' || expense.technicianId === filters.technicianId;
       
-      const expenseDate = expense.date ? (typeof expense.date === 'string' ? new Date(expense.date) : (expense.date as any).toDate()) : new Date();
+      const expenseDate = safeToDate(expense.date);
+      if (!expenseDate) return false;
+
       const dateMatch = !filters.dateRange?.from || !filters.dateRange?.to || isWithinInterval(expenseDate, { start: filters.dateRange.from, end: filters.dateRange.to });
 
       return techMatch && dateMatch;
     }).sort((a,b) => {
-        const dateA = a.date ? (typeof a.date === 'string' ? new Date(a.date) : (a.date as any).toDate()).getTime() : 0;
-        const dateB = b.date ? (typeof b.date === 'string' ? new Date(b.date) : (b.date as any).toDate()).getTime() : 0;
-        return dateB - dateA;
+        const dateA = safeToDate(a.date);
+        const dateB = safeToDate(b.date);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
     });
   }, [allExpenses, filters]);
 
 
   const getEntryDate = (entry: Expense) => {
-    if (!entry.date) return 'N/A';
-    const date = typeof entry.date === 'string' ? new Date(entry.date) : (entry.date as any).toDate();
+    const date = safeToDate(entry.date);
+    if (!date) return 'N/A';
     return format(date, 'PPP');
   };
   
