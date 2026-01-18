@@ -377,7 +377,7 @@ export default function CustomersClient({ allRecords, allCustomers }: { allRecor
               )) : (
                 <TableRow>
                   <TableCell colSpan={8} className="h-24 text-center">
-                    No records found. Use the 'Import from CSV' button to get started.
+                    show all in database
                   </TableCell>
                 </TableRow>
               )}
